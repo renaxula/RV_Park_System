@@ -1,11 +1,12 @@
 const pkg = require('pg');
 const { Pool, Client } = pkg;
+require('dotenv').config()
 
-const dbUser = 'alexanderschott';
-const dbPassword = '12345';
-const dbHost = 'localhost';
-const dbPort = 5432;
-const dbName = 'count';
+const dbUser = process.env.POSTGRES_USER;
+const dbPassword = process.env.POSTGRES_PASS;
+const dbHost = process.env.POSTGRES_HOST;
+const dbPort = process.env.POSTGRES_PORT;
+const dbName = process.env.POSTGRES_DB_NAME;
 
 async function initiateDatabase(){
   // Connect to default DB
