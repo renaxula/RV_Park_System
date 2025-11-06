@@ -12,6 +12,9 @@ import { ViewReservations } from './components/pages/ViewReservations';
 import { OpenSitesReport } from './components/pages/OpenSitesReport';
 import { OccupiedSitesReport } from './components/pages/OccupiedSitesReport';
 
+// TODO: Add react router
+// Make it look not ugly
+
 
 function App() {
   return (
