@@ -19,7 +19,7 @@ import { OccupiedSitesReport } from './components/pages/OccupiedSitesReport';
 function App() {
   return (
     <>
-      <OccupiedSitesReport />
+      <h1>Welcome to the RV Park Reservation System</h1>
     </>
   )
 }
