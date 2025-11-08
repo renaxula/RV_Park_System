@@ -1,10 +1,7 @@
-
-
 export function MakeReservation() {
-  return (
-    <div>
-      <h2>Make a Reservation</h2>
+  return (<>
       <form>
+        <h2>Make a Reservation</h2>
         <label>
           Name:
           <input type="text" name="name" />
@@ -30,18 +27,6 @@ export function MakeReservation() {
           RV size:
           <input type="number" name="rvSize" min="1" />
         </label>
-        {/* TODO: make size responsive to RV size and disable if tent is selected */}
-        {/* Different site type: RV Spaces:
-            1-14 42’-43’ long (max RV length 40’)
-            17-31 45’-46’ long (max RV length 43’)
-            32-45 65’ long
-
-            Tent/RV spaces
-            1, 19, and 21
-            Tent only spaces
-            1 Avaialable.
-
-            */}
 
         <label>
           Site Size:
@@ -50,6 +35,6 @@ export function MakeReservation() {
         <br />
         <button type="submit">Submit Reservation</button>
       </form>
-    </div>
+      </>
   )
 }
