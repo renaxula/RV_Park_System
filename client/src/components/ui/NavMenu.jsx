@@ -3,20 +3,22 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 
-// ...existing code...
 export function NavMenu() {
   const [open, setOpen] = useState(true);
 
   useEffect(() => {
-    // keep menu visible on wide screens, collapsed on small screens
     const handleResize = () => {
-      if (window.innerWidth > 768) setOpen(true);
+      if (window.innerWidth > 1547) setOpen(true);
       else setOpen(false);
     };
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  const handleNavClick = () => {
+    if (window.innerWidth <= 1547) setOpen(false);
+  };
 
   return (
     <NavMenuStyled isOpen={open}>
@@ -33,48 +35,48 @@ export function NavMenu() {
 
       {open && (
         <ul>
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
-            <Link to="/admin">Admin</Link>
-          </li>
-          <li>
-            <Link to="/available-spots">Available Spots</Link>
-          </li>
-          <li>
-            <Link to="/make-reservation">Make Reservation</Link>
-          </li>
-          <li>
-            <Link to="/employee-reservation">Employee Reservation</Link>
-          </li>
-          <li>
-            <Link to="/view-reservations">View Reservations</Link>
-          </li>
-          <li>
-            <Link to="/change-rates">Change Rates</Link>
-          </li>
-          <li>
-            <Link to="/change-password">Change Password</Link>
-          </li>
-          <li>
-            <Link to="/reset-password">Reset Password</Link>
-          </li>
-          <li>
-            <Link to="/register">Register</Link>
-          </li>
-          <li>
-            <Link to="/elevate-demote">Elevate/Demote</Link>
-          </li>
-          <li>
-            <Link to="/map-and-rules">Map & Rules</Link>
-          </li>
-          <li>
-            <Link to="/occupied-report">Occupied Report</Link>
-          </li>
-          <li>
-            <Link to="/open-report">Open Report</Link>
-          </li>
+          <Item>
+            <Link to="/" onClick={handleNavClick}>Home</Link>
+          </Item>
+          <Item>
+            <Link to="/admin" onClick={handleNavClick}>Admin</Link>
+          </Item>
+          <Item>
+            <Link to="/available-spots" onClick={handleNavClick}>Available Spots</Link>
+          </Item>
+          <Item>
+            <Link to="/make-reservation" onClick={handleNavClick}>Make Reservation</Link>
+          </Item>
+          <Item>
+            <Link to="/employee-reservation" onClick={handleNavClick}>Employee Reservation</Link>
+          </Item>
+          <Item>
+            <Link to="/view-reservations" onClick={handleNavClick}>View Reservations</Link>
+          </Item>
+          <Item>
+            <Link to="/change-rates" onClick={handleNavClick}>Change Rates</Link>
+          </Item>
+          <Item>
+            <Link to="/change-password" onClick={handleNavClick}>Change Password</Link>
+          </Item>
+          <Item>
+            <Link to="/reset-password" onClick={handleNavClick}>Reset Password</Link>
+          </Item>
+          <Item>
+            <Link to="/register" onClick={handleNavClick}>Register</Link>
+          </Item>
+          <Item>
+            <Link to="/elevate-demote" onClick={handleNavClick}>Elevate/Demote</Link>
+          </Item>
+          <Item>
+            <Link to="/map-and-rules" onClick={handleNavClick}>Map & Rules</Link>
+          </Item>
+          <Item>
+            <Link to="/occupied-report" onClick={handleNavClick}>Occupied Report</Link>
+          </Item>
+          <Item>
+            <Link to="/open-report" onClick={handleNavClick}>Open Report</Link>
+          </Item>
         </ul>
       )}
     </NavMenuStyled>
@@ -82,10 +84,12 @@ export function NavMenu() {
 }
 const NavMenuStyled = styled.nav`
   /* base */
+  margin-top: 1rem;
   display: inline-flex; /* shrink to content by default */
   align-items: flex-start;
   background-color: #fff;
-  padding: ${p => (p.isOpen ? "1rem" : "0.75rem")}; /* small padding when closed */
+  padding: ${(p) =>
+    p.isOpen ? "1rem" : "0.75rem"}; /* small padding when closed */
   box-sizing: border-box;
   border-radius: 0.75rem;
   box-shadow: 0 4px 6px rgba(0.1, 0.1, 0.1, 0.4);
@@ -97,17 +101,22 @@ const NavMenuStyled = styled.nav`
     align-items: flex-start;
   }
 
+  ul > li {
+    padding: 1rem;
+  }
+
   /* small screens: collapse sliding panel */
-  @media (max-width: 768px) {
-    width: ${p => (p.isOpen ? "100%" : "auto")}; /* full width when open, auto when closed */
-    justify-content: ${p => (p.isOpen ? "flex-start" : "center")};
+  @media (max-width: 1547px) {
+    width: ${(p) =>
+      p.isOpen ? "100%" : "auto"}; /* full width when open, auto when closed */
+    justify-content: ${(p) => (p.isOpen ? "flex-start" : "center")};
 
     ul {
       flex-direction: column;
       width: 100%;
       overflow: hidden;
-      max-height: ${p => (p.isOpen ? "1000px" : "0")};
-      opacity: ${p => (p.isOpen ? "1" : "0")};
+      max-height: ${(p) => (p.isOpen ? "1000px" : "0")};
+      opacity: ${(p) => (p.isOpen ? "1" : "0")};
       padding: 0;
       margin-top: 0;
       background: transparent;
@@ -120,7 +129,7 @@ const NavMenuStyled = styled.nav`
   }
 
   /* desktop: always show items inline */
-  @media (min-width: 769px) {
+  @media (min-width: 1547px) {
     width: auto;
     ul {
       flex-direction: row;
@@ -165,7 +174,23 @@ const StyledButton = styled.button`
     transform: rotate(-45deg);
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 1547px) {
     display: flex; /* show burger on small screens */
+  }
+`;
+
+const Item = styled.li`
+  padding: 6px 8px;
+  @media (min-width: 1547px) {
+    padding: 6px 10px;
+  }
+  text-decoration: none;
+  a {
+    color: #000;
+    font-weight: 600;
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
   }
 `;

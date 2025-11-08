@@ -25,7 +25,7 @@ export default function AppRouter() {
           <header>
             <NavMenu />
           </header>
-          <main>
+          <Layout>
             <Routes>
               <Route path="/" element={<App />} />
               <Route path="/admin" element={<AdminDashboard />} />
@@ -48,7 +48,7 @@ export default function AppRouter() {
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/view-reservations" element={<ViewReservations />} />
             </Routes>
-          </main>
+          </Layout>
         </Content>
       </BrowserRouter>
     </Page>
@@ -69,17 +69,16 @@ const Page = styled.div`
     position: relative;
     z-index: 1;
   }
-  form {
-    background: rgba(255, 255, 255, 1);
-    color: #000;
-    padding: 12px;
-    border-radius: 6px;
-    max-width: 720px;
-    filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
-    margin-top: 12px;
-  }
 `;
 
 const Content = styled.div`
   padding: 24px;
+`;
+
+
+const Layout = styled.main`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
 `;
