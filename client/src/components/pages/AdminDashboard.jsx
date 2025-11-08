@@ -1,6 +1,9 @@
+import { Card } from "../ui/Card";
+
+
 export function AdminDashboard() {
   return (
-    <div>
+    <Card>
       <h2>Admin Dashboard</h2>
       <ul>
         <li>
@@ -19,6 +22,6 @@ export function AdminDashboard() {
           <a href="#/admin/change-rates">Change Site Rates</a>
         </li>
       </ul>
-    </div>
+    </Card>
   );
 }

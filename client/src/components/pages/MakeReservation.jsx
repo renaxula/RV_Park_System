@@ -125,7 +125,7 @@ const Actions = styled.div`
 `;
 
 const SubmitButton = styled.button`
-  background: linear-gradient(90deg, #045de9 0%, #09c6f9 100%);
+  background: #045de9;
   color: white;
   border: none;
   padding: 10px 16px;
@@ -133,7 +133,6 @@ const SubmitButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 8px 20px rgba(3, 102, 214, 0.18);
-  transition: transform 140ms ease, box-shadow 140ms ease, opacity 120ms ease;
 
   &:hover {
     transform: translateY(-2px);

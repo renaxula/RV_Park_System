@@ -1,6 +1,8 @@
+import { Card } from "../ui/Card";
+
 export function ChangeRates() {
   return (
-    <div>
+    <Card>
       <h2>Change Rates</h2>
       <p>Update nightly rates for each site type.</p>
       <form>
@@ -21,6 +23,6 @@ export function ChangeRates() {
         <br />
         <button type="submit">Save Rates</button>
       </form>
-    </div>
+    </Card>
   );
 }

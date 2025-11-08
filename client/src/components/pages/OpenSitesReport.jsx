@@ -1,6 +1,8 @@
+import { Card } from "../ui/Card";
+
 export function OpenSitesReport() {
   return (
-    <div>
+    <Card>
       <h2>Open Sites Report</h2>
       <p>
         Shows which sites are available / reserved, nights available, hook-up,
@@ -26,6 +28,6 @@ export function OpenSitesReport() {
           </tr>
         </tbody>
       </table>
-    </div>
+    </Card>
   );
 }

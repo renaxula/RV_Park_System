@@ -1,6 +1,8 @@
+import { Card } from "../ui/Card";
+
 export function ViewReservations() {
   return (
-    <div>
+    <Card>
       <h2>View / Edit Reservations</h2>
       <p>List of current reservations with basic edit links.</p>
       <table>
@@ -27,6 +29,6 @@ export function ViewReservations() {
           </tr>
         </tbody>
       </table>
-    </div>
+    </Card>
   );
 }

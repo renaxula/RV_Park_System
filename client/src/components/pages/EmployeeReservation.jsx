@@ -1,6 +1,9 @@
+import { Card } from "../ui/Card";
+
+
 export function EmployeeReservation() {
   return (
-    <div>
+    <Card>
       <h2>Employee: Make / Edit Reservation</h2>
       <form>
         <label>
@@ -24,6 +27,6 @@ export function EmployeeReservation() {
         <br />
         <button type="submit">Create / Update Reservation</button>
       </form>
-    </div>
+    </Card>
   );
 }

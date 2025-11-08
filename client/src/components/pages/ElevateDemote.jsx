@@ -1,6 +1,9 @@
+import { Card } from "../ui/Card";
+
+
 export function ElevateDemote() {
   return (
-    <div>
+    <Card>
       <h2>Elevate / Demote Accounts</h2>
       <form>
         <label>
@@ -19,6 +22,6 @@ export function ElevateDemote() {
         <br />
         <button type="submit">Change Role</button>
       </form>
-    </div>
+    </Card>
   );
 }

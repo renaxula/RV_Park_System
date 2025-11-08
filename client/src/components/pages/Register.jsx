@@ -1,8 +1,9 @@
 
+import { Card } from "../ui/Card";
 
 export function Register() {
   return (
-    <div>
+    <Card>
       <h2>Register Page</h2>
       <form>
         <label>
@@ -25,6 +26,6 @@ export function Register() {
         <br />
         <button type="submit">Register</button>
       </form>
-    </div>
+    </Card>
   )
 }

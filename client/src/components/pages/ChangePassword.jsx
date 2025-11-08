@@ -1,6 +1,8 @@
+import { Card } from "../ui/Card";
+
 export function ChangePassword() {
   return (
-    <div>
+    <Card>
       <h2>Change Your Password</h2>
       <form>
         <label>
@@ -20,6 +22,6 @@ export function ChangePassword() {
         <br />
         <button type="submit">Change Password</button>
       </form>
-    </div>
+    </Card>
   );
 }

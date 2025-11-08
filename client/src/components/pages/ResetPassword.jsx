@@ -1,6 +1,8 @@
+import { Card } from "../ui/Card";
+
 export function ResetPassword() {
   return (
-    <div>
+    <Card>
       <h2>Reset Password</h2>
       <form>
         <label>
@@ -20,6 +22,6 @@ export function ResetPassword() {
         <br />
         <button type="submit">Reset Password</button>
       </form>
-    </div>
+    </Card>
   );
 }

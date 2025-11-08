@@ -1,6 +1,8 @@
+import { Card } from "../ui/Card";
+
 export function MapAndRules() {
   return (
-    <div>
+    <Card>
       <h2>Map & Rules</h2>
       <p>
         Map placeholder (mobile-friendly). See current prices{" "}
@@ -15,6 +17,6 @@ export function MapAndRules() {
           <li>Reservations allowed up to 6 months in advance.</li>
         </ul>
       </div>
-    </div>
+    </Card>
   );
 }

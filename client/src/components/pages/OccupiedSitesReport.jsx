@@ -1,6 +1,8 @@
+import { Card } from "../ui/Card";
+
 export function OccupiedSitesReport() {
   return (
-    <div>
+    <Card>
       <h2>Occupied Sites Report</h2>
       <p>Shows date, last name, site, nights, and reservation notes.</p>
       <table>
@@ -23,6 +25,6 @@ export function OccupiedSitesReport() {
           </tr>
         </tbody>
       </table>
-    </div>
+    </Card>
   );
 }
