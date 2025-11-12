@@ -53,7 +53,7 @@ export function NavMenu() {
           <Item>
             <Link to="/view-reservations" onClick={handleNavClick}>View Reservations</Link>
           </Item>
-          <Item>
+          {/* <Item>
             <Link to="/change-rates" onClick={handleNavClick}>Change Rates</Link>
           </Item>
           <Item>
@@ -76,7 +76,7 @@ export function NavMenu() {
           </Item>
           <Item>
             <Link to="/open-report" onClick={handleNavClick}>Open Report</Link>
-          </Item>
+          </Item> */}
         </ul>
       )}
     </NavMenuStyled>
@@ -184,7 +184,22 @@ const Item = styled.li`
   @media (min-width: 1547px) {
     padding: 6px 10px;
   }
+
+  @media (max-width: 1547px) {
+    margin: 0.5rem 1rem;
+  }
+
   text-decoration: none;
+  background-color: #f6f6f6ff;
+  border-radius: 2rem;
+  margin: 0 1rem;
+
+  &:hover {
+    background-color: rgba(231, 244, 225, 1);
+  }
+
+  transition: background-color 0.3s ease;
+
   a {
     color: #000;
     font-weight: 600;
