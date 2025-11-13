@@ -66,11 +66,11 @@ async function initiateDatabase(){
 initiateDatabase();
 
 const pool = new Pool({
-  user: 'alexanderschott',
-  host: 'localhost',
-  database: 'count',
-  password: '12345',
-  port: 5432,
+  user: dbUser,
+  host: dbHost,
+  database: dbName,
+  password: dbPassword,
+  port: dbPort,
 });
 
 async function postCountData(count) {
