@@ -1,57 +1,90 @@
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import App from "../../App";
-import { AdminDashboard } from "../pages/AdminDashboard";
-import { AvailableSpots } from "../pages/AvailableSpots";
-import { ChangePassword } from "../pages/ChangePassword";
-import { ChangeRates } from "../pages/ChangeRates";
-import { ElevateDemote } from "../pages/ElevateDemote";
-import { EmployeeReservation } from "../pages/EmployeeReservation";
-import { MakeReservation } from "../pages/MakeReservation";
-import { MapAndRules } from "../pages/MapAndRules";
-import { OccupiedSitesReport } from "../pages/OccupiedSitesReport";
-import { OpenSitesReport } from "../pages/OpenSitesReport";
-import { Register } from "../pages/Register";
-import { ResetPassword } from "../pages/ResetPassword";
-import { ViewReservations } from "../pages/ViewReservations";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import bg from "../../assets/background.png";
 import { NavMenu } from "../ui/NavMenu";
+import { routesConfig } from "./routesConfig";
+import { Card } from "../ui/Card";
+import { AuthProvider, useAuth } from "./AuthContext";
 
 export default function AppRouter() {
   return (
-    <Page>
+    <AuthProvider>
       <BrowserRouter>
-        <Content>
-          <header>
-            <NavMenu />
-          </header>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<App />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/available-spots" element={<AvailableSpots />} />
-              <Route path="/change-rates" element={<ChangeRates />} />
-              <Route path="/change-password" element={<ChangePassword />} />
-              <Route path="/elevate-demote" element={<ElevateDemote />} />
-              <Route
-                path="/employee-reservation"
-                element={<EmployeeReservation />}
-              />
-              <Route path="/make-reservation" element={<MakeReservation />} />
-              <Route path="/map-and-rules" element={<MapAndRules />} />
-              <Route
-                path="/occupied-report"
-                element={<OccupiedSitesReport />}
-              />
-              <Route path="/open-report" element={<OpenSitesReport />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/view-reservations" element={<ViewReservations />} />
-            </Routes>
-          </Layout>
-        </Content>
+        <Page>
+          <Content>
+            <header>
+              <NavMenu />
+            </header>
+            <Layout>
+              <Routes>
+                {routesConfig.map(({ path, Component, requiredRole }) => (
+                  <Route
+                    key={path}
+                    path={path}
+                    element={
+                      <ProtectedRoute requiredRole={requiredRole}>
+                        <Component />
+                      </ProtectedRoute>
+                    }
+                  />
+                ))}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Layout>
+          </Content>
+        </Page>
       </BrowserRouter>
-    </Page>
+    </AuthProvider>
+  );
+}
+
+function ProtectedRoute({ requiredRole, children }) {
+  const location = useLocation();
+  const { loading, isAuthenticated, hasRole } = useAuth();
+
+  if (loading) {
+    return (
+      <Card>
+        <p>Checking session...</p>
+      </Card>
+    );
+  }
+
+  if (requiredRole === null) {
+    return children;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (!hasRole(requiredRole)) {
+    return <Restricted requiredRole={requiredRole} />;
+  }
+
+  return children;
+}
+
+function Restricted({ requiredRole }) {
+  const { user } = useAuth();
+  return (
+    <Card>
+      <h2>Access Restricted</h2>
+      <p>
+        The current role is <strong>{user?.role ?? "unknown"}</strong>. This page requires
+        <strong> {requiredRole}</strong> access.
+      </p>
+      <p>You are signed in but do not have permission to view this page.</p>
+    </Card>
+  );
+}
+
+function NotFound() {
+  return (
+    <Card>
+      <h2>Page Not Found</h2>
+      <p>We could not find what you were looking for. Try another page.</p>
+    </Card>
   );
 }
 
@@ -74,7 +107,6 @@ const Page = styled.div`
 const Content = styled.div`
   padding: 24px;
 `;
-
 
 const Layout = styled.main`
   display: flex;
