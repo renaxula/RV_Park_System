@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 function CurrentAvailability() {
   const [rows, setRows] = useState([]);
+
   useEffect(() => {
     async function loadAvailability() {
       const response = await fetch("http://localhost:3000/api/availableSites");
@@ -19,7 +20,6 @@ function CurrentAvailability() {
   console.log(rows);
   return (
     <>
-      <h2>Currently Available Spots</h2>
       <ul>
         {rows.map((row) => (
           <li key={row.siteid}>

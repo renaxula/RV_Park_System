@@ -1,7 +1,6 @@
 const { getCurrentAvailableSites, activeReservations } = require("./db.js");
 const express = require("express");
 const cors = require("cors");
-const { act } = require("react");
 const app = express();
 const PORT = 3000;
 
@@ -28,6 +27,7 @@ app.get("/api/availableSites", async (req, res) => {
 
   try {
     const results = await getCurrentAvailableSites(startDate, endDate);
+    console.log("Available Report Sent");
     res.json(results);
   } catch (err) {
     console.error(err);
@@ -35,7 +35,7 @@ app.get("/api/availableSites", async (req, res) => {
   }
 });
 
-app.get("/api/active", async (req, res) => {
+app.get("/api/occupied", async (req, res) => {
   let { date } = req.query;
   if (!date) {
     //if date not provided use today
@@ -45,6 +45,7 @@ app.get("/api/active", async (req, res) => {
 
   try {
     const results = await activeReservations(date);
+    console.log("Occupied Report Sent");
     res.json(results);
   } catch (err) {
     console.error(err);

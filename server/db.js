@@ -280,14 +280,14 @@ async function getCurrentAvailableSites(start, end) {
   const results = await pool.query(sql, [start, end]);
   // NOTE: end must always be at least one day later to account for back-to-back reservations
 
-  console.log(results);
+  //  console.log(results);
   return results.rows;
 }
 
 async function activeReservations(date) {
   let sql = `
   select
-     r.lastName,
+     u.lastName,
      s.siteId,
      s.siteName,
      ( r.endDate - $1::date ) as DaysLeft,
@@ -295,7 +295,7 @@ async function activeReservations(date) {
   FROM sites s
   LEFT JOIN reservations r
       ON s.siteId = r.siteId
-      AND r.startDate < $1::date --startDate is before DATE
+      AND r.startDate <= $1::date --startDate is before DATE
       AND r.endDate > $1::date --endDate is after DATE
   LEFT JOIN users u
       ON r.userId = u.userId
@@ -303,7 +303,7 @@ async function activeReservations(date) {
   `;
 
   const results = await pool.query(sql, [date]);
-  return results.rowCount;
+  return results.rows;
 }
 
 module.exports = { getCurrentAvailableSites, activeReservations };
