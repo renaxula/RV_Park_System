@@ -75,7 +75,6 @@ const Content = styled.div`
   padding: 24px;
 `;
 
-
 const Layout = styled.main`
   display: flex;
   flex-direction: column;
