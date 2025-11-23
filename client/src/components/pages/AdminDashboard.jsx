@@ -1,5 +1,5 @@
 import { Card } from "../ui/Card";
-
+import { Link } from "react-router-dom";
 
 export function AdminDashboard() {
   return (
@@ -7,19 +7,19 @@ export function AdminDashboard() {
       <h2>Admin Dashboard</h2>
       <ul>
         <li>
-          <a href="#/admin/reset-password">Reset Passwords</a>
+          <Link to="/reset-password">Reset Passwords</Link>
         </li>
         <li>
-          <a href="#/admin/elevate-demote">Elevate / Demote Accounts</a>
+          <Link to="/elevate-demote">Elevate / Demote Accounts</Link>
         </li>
         <li>
-          <a href="#/reports/open-sites">View Open Sites Report</a>
+          <Link to="/open-report">View Open Sites Report</Link>
         </li>
         <li>
-          <a href="#/reports/occupied-sites">View Occupied Sites Report</a>
+          <Link to="/occupied-report">View Occupied Sites Report</Link>
         </li>
         <li>
-          <a href="#/admin/change-rates">Change Site Rates</a>
+          <Link to="/change-rates">Change Site Rates</Link>
         </li>
       </ul>
     </Card>

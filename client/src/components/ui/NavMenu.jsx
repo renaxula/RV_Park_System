@@ -1,10 +1,14 @@
-// ...existing code...
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
+import { routesConfig } from "../router/routesConfig";
+import { useAuth } from "../router/AuthContext";
 
 export function NavMenu() {
   const [open, setOpen] = useState(true);
+  const { user, isAuthenticated, hasRole, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleResize = () => {
@@ -16,127 +20,108 @@ export function NavMenu() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    if (window.innerWidth <= 1547) setOpen(false);
+  }, [location.pathname]);
+
   const handleNavClick = () => {
     if (window.innerWidth <= 1547) setOpen(false);
   };
 
+  const navItems = routesConfig.filter((route) => {
+    if (!route.showInNav) return false;
+    if (route.requiredRole === null) return true;
+    return hasRole(route.requiredRole);
+  });
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
+
   return (
     <NavMenuStyled isOpen={open}>
-      <StyledButton
-        className={`burger ${open ? "open" : ""}`}
-        aria-label={open ? "Close menu" : "Open menu"}
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span />
-        <span />
-        <span />
-      </StyledButton>
+      <TopRow>
+        <StyledButton
+          className={`burger ${open ? "open" : ""}`}
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <span />
+          <span />
+          <span />
+        </StyledButton>
+        <UserInfo>
+          {isAuthenticated ? (
+            <>
+              <span>Signed in as {user.username} ({user.role})</span>
+              <button type="button" onClick={handleLogout}>Logout</button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" onClick={handleNavClick}>Login</Link>
+              <Link to="/register" onClick={handleNavClick}>Register</Link>
+            </>
+          )}
+        </UserInfo>
+      </TopRow>
 
       {open && (
         <ul>
-          <Item>
-            <Link to="/" onClick={handleNavClick}>Home</Link>
-          </Item>
-          <Item>
-            <Link to="/admin" onClick={handleNavClick}>Admin</Link>
-          </Item>
-          <Item>
-            <Link to="/available-spots" onClick={handleNavClick}>Available Spots</Link>
-          </Item>
-          <Item>
-            <Link to="/make-reservation" onClick={handleNavClick}>Make Reservation</Link>
-          </Item>
-          <Item>
-            <Link to="/employee-reservation" onClick={handleNavClick}>Employee Reservation</Link>
-          </Item>
-          <Item>
-            <Link to="/view-reservations" onClick={handleNavClick}>View Reservations</Link>
-          </Item>
-          {/* <Item>
-            <Link to="/change-rates" onClick={handleNavClick}>Change Rates</Link>
-          </Item>
-          <Item>
-            <Link to="/change-password" onClick={handleNavClick}>Change Password</Link>
-          </Item>
-          <Item>
-            <Link to="/reset-password" onClick={handleNavClick}>Reset Password</Link>
-          </Item>
-          <Item>
-            <Link to="/register" onClick={handleNavClick}>Register</Link>
-          </Item>
-          <Item>
-            <Link to="/elevate-demote" onClick={handleNavClick}>Elevate/Demote</Link>
-          </Item>
-          <Item>
-            <Link to="/map-and-rules" onClick={handleNavClick}>Map & Rules</Link>
-          </Item>
-          <Item>
-            <Link to="/occupied-report" onClick={handleNavClick}>Occupied Report</Link>
-          </Item>
-          <Item>
-            <Link to="/open-report" onClick={handleNavClick}>Open Report</Link>
-          </Item> */}
+          {navItems.map((item) => (
+            <Item key={item.path} $active={location.pathname === item.path}>
+              <Link
+                to={item.path}
+                onClick={handleNavClick}
+                aria-current={location.pathname === item.path ? "page" : undefined}
+              >
+                {item.label}
+              </Link>
+            </Item>
+          ))}
         </ul>
       )}
     </NavMenuStyled>
   );
 }
+
 const NavMenuStyled = styled.nav`
-  /* base */
   margin-top: 1rem;
-  display: inline-flex; /* shrink to content by default */
-  align-items: flex-start;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
   background-color: #fff;
-  padding: ${(p) =>
-    p.isOpen ? "1rem" : "0.75rem"}; /* small padding when closed */
+  padding: ${(p) => (p.isOpen ? "1rem" : "0.75rem")};
   box-sizing: border-box;
   border-radius: 0.75rem;
   box-shadow: 0 4px 6px rgba(0.1, 0.1, 0.1, 0.4);
+  width: ${(p) => (p.isOpen ? "100%" : "auto")};
+
   ul {
     list-style: none;
     padding: 0;
     margin: 0;
     display: flex;
     align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
-  ul > li {
-    padding: 1rem;
-  }
-
-  /* small screens: collapse sliding panel */
-  @media (max-width: 1547px) {
-    width: ${(p) =>
-      p.isOpen ? "100%" : "auto"}; /* full width when open, auto when closed */
-    justify-content: ${(p) => (p.isOpen ? "flex-start" : "center")};
-
-    ul {
-      flex-direction: column;
-      width: 100%;
-      overflow: hidden;
-      max-height: ${(p) => (p.isOpen ? "1000px" : "0")};
-      opacity: ${(p) => (p.isOpen ? "1" : "0")};
-      padding: 0;
-      margin-top: 0;
-      background: transparent;
-    }
-
-    a {
-      display: block;
-      padding: 8px 12px;
-    }
-  }
-
-  /* desktop: always show items inline */
   @media (min-width: 1547px) {
     width: auto;
     ul {
-      flex-direction: row;
-      opacity: 1;
-      max-height: none;
+      flex-wrap: nowrap;
     }
   }
+`;
+
+const TopRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: space-between;
 `;
 
 const StyledButton = styled.button`
@@ -150,7 +135,7 @@ const StyledButton = styled.button`
   cursor: pointer;
   padding: 0;
   box-sizing: border-box;
-  z-index: 3; /* ensure it's above the nav background */
+  z-index: 3;
 
   span {
     width: 30px;
@@ -175,37 +160,55 @@ const StyledButton = styled.button`
   }
 
   @media (max-width: 1547px) {
-    display: flex; /* show burger on small screens */
+    display: flex;
   }
 `;
 
 const Item = styled.li`
   padding: 6px 8px;
-  @media (min-width: 1547px) {
-    padding: 6px 10px;
-  }
-
-  @media (max-width: 1547px) {
-    margin: 0.5rem 1rem;
-  }
-
   text-decoration: none;
-  background-color: #f6f6f6ff;
+  background-color: ${(p) => (p.$active ? "#e2e8f0" : "#f6f6f6")};
   border-radius: 2rem;
-  margin: 0 1rem;
+  margin: 0 0.25rem;
+  transition: background-color 0.3s ease;
 
   &:hover {
     background-color: rgba(231, 244, 225, 1);
   }
 
-  transition: background-color 0.3s ease;
+  a {
+    color: #000;
+    font-weight: 600;
+    text-decoration: none;
+    display: block;
+    padding: 6px 10px;
+  }
+
+  @media (max-width: 1547px) {
+    width: 100%;
+    a {
+      width: 100%;
+    }
+  }
+`;
+
+const UserInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+
+  button {
+    border: 1px solid #d4d4d8;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
 
   a {
     color: #000;
     font-weight: 600;
     text-decoration: none;
-    &:hover {
-      text-decoration: underline;
-    }
   }
 `;
