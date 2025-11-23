@@ -10,10 +10,11 @@ const dbName = process.env.POSTGRES_DB_NAME;
 
 // Optional elevated credentials just for creating the database if it does not exist.
 // If not provided, we will reuse the normal creds (may fail with permission denied).
-const createDbUser = process.env.POSTGRES_SUPER_USER || dbUser;
-const createDbPassword = process.env.POSTGRES_SUPER_PASS || dbPassword;
+//??? Anyone running this locally should have sudo perms? Then this functionality will be removed in prod?
+//Dropping and creating the database is just a devleopment thing.
+// const createDbUser = process.env.POSTGRES_SUPER_USER || dbUser;
+// const createDbPassword = process.env.POSTGRES_SUPER_PASS || dbPassword;
 
-// Main pool used by the app and the session store.
 const pool = new Pool({
   user: dbUser,
   host: dbHost,
@@ -21,6 +22,158 @@ const pool = new Pool({
   password: dbPassword,
   port: dbPort,
 });
+
+const adminPool = new Pool({
+  user: dbUser,
+  host: dbHost,
+  database: "postgres",
+  password: dbPassword,
+  port: dbPort,
+});
+
+async function initiateDatabase() {
+  await dropDatabase(dbName);
+  await createDatabase();
+  await createTables();
+  // loadDemoData();
+}
+
+initiateDatabase();
+
+async function dropDatabase(dbName) {
+  const client = await adminPool.connect();
+  try {
+    await client.query(`
+      SELECT pg_terminate_backend(pid)
+      FROM pg_stat_activity
+      WHERE datname = $1
+    `,
+      [dbName]
+    );
+
+    await client.query(`DROP DATABASE IF EXISTS ${dbName}`);
+    console.log(`Database '${dbName}' dropped.`);
+  } finally {
+    client.release();
+  }
+}
+
+async function createDatabase() {
+  if (await testConnection()) {
+    return;
+  }
+
+  const client = await adminPool.connect();
+  try {
+    await client.query(`CREATE DATABASE ${dbName}`);
+    console.log(`Database '${dbName}' created.`);
+  } catch (error){
+    console.error(`Couldn't create database ${dbName}`);
+  }finally {
+    client.release();
+  }
+}
+
+async function testConnection() {
+  let client;
+
+  try {
+    client = await pool.connect();
+    await client.query("SELECT 1");
+    console.log("Connected!");
+    return true;
+  } catch (err) {
+    console.error("DB connection failed:", err.message);
+    return false;
+  } finally {
+    if (client) client.release();
+  }
+}
+
+async function createTables() {
+  // Basic data table used by the existing sample endpoint.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS count_table (
+      id SERIAL PRIMARY KEY,
+      value INT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_roles (
+      roleId SERIAL PRIMARY KEY,
+      role VARCHAR(128) NOT NULL
+    );
+  `);
+  console.log(`Table 'user_roles' created in '${dbName}' database.`);
+
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      userId SERIAL PRIMARY KEY,
+      emailAddress VARCHAR(256) NOT NULL,
+      firstName VARCHAR(128) NOT NULL,
+      lastName VARCHAR(128) NOT NULL,
+      phone VARCHAR(256) NOT NULL,
+      affiliation VARCHAR(128) NOT NULL,
+      status VARCHAR(128) NOT NULL,
+      lastReservation Date,
+      roleId INT NOT NULL,
+      passwordHash VARCHAR(256) NOT NULL,
+      FOREIGN KEY (roleId) REFERENCES user_roles(roleId)
+    );
+  `);
+  console.log(`Table 'users' created in '${dbName}' database.`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "session" (
+      "sid" varchar NOT NULL COLLATE "default",
+      "sess" json NOT NULL,
+      "expire" timestamp(6) NOT NULL,
+      CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+    );
+  `);
+
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");`
+  );
+
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS site_types (
+      siteTypeId SERIAL PRIMARY KEY,
+      siteType VARCHAR(256) NOT NULL,
+      rate DECIMAL(10, 2) NOT NULL,
+      maxLength INT NOT NULL
+    );
+  `);
+  console.log(`Table 'site_types' created in '${dbName}' database.`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS sites (
+      siteId SERIAL PRIMARY KEY,
+      siteName VARCHAR(256) NOT NULL,
+      siteTypeId INT NOT NULL,
+      FOREIGN KEY (siteTypeId) REFERENCES site_types(siteTypeId)
+    );
+  `);
+  console.log(`Table 'sites' created in '${dbName}' database.`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reservations (
+      reservationId SERIAL PRIMARY KEY,
+      userId INT NOT NULL,
+      siteId INT NOT NULL,
+      startDate Date NOT NULL,
+      endDate Date NOT NULL,
+      notes VARCHAR(256),
+      FOREIGN KEY (userId) REFERENCES users(userId),
+      FOREIGN KEY (siteId) REFERENCES sites(siteId)
+    );
+  `);
+  console.log(`Table 'reservations' created in '${dbName}' database.`);
+}
 
 const roles = {
   role: "customer",
@@ -89,67 +242,6 @@ const reservations = [
   },
 ];
 
-async function initiateDatabase() {
-  // Connect to default DB
-  const client = new Client({
-    user: createDbUser,
-    host: dbHost,
-    database: "postgres",
-    password: createDbPassword,
-    database: "postgres",
-    password: dbPassword,
-    port: dbPort,
-  });
-
-  await client.connect();
-  try {
-    const dbCheck = await client.query(
-      "SELECT 1 FROM pg_database WHERE datname = $1",
-      [dbName]
-    );
-    if (dbCheck.rowCount === 0) {
-      await client.query(`CREATE DATABASE ${dbName}`);
-      console.log(`Database '${dbName}' created.`);
-    }
-  } finally {
-    await client.end();
-  }
-}
-
-async function ensureTables() {
-  // Basic data table used by the existing sample endpoint.
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS count_table (
-      id SERIAL PRIMARY KEY,
-      value INT NOT NULL,
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      email TEXT UNIQUE NOT NULL,
-      username TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      role TEXT NOT NULL DEFAULT 'customer',
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS "session" (
-      "sid" varchar NOT NULL COLLATE "default",
-      "sess" json NOT NULL,
-      "expire" timestamp(6) NOT NULL,
-      CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
-    );
-  `);
-  await pool.query(
-    `CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");`
-  );
-}
-
 async function seedDemoUsers() {
   const demoUsers = [
     {
@@ -181,74 +273,7 @@ async function seedDemoUsers() {
     port: dbPort,
   });
 
-  // await pool.query(`
-  //   CREATE TABLE count_table (
-  //     id SERIAL PRIMARY KEY,
-  //     value INT NOT NULL,
-  //     created_at TIMESTAMP DEFAULT NOW()
-  //   );
-  // `);
-  // console.log(`Table 'count_table' created in '${dbName}' database.`);
   try {
-    await pool.query(`
-      CREATE TABLE user_roles (
-        roleId SERIAL PRIMARY KEY,
-        role VARCHAR(128) NOT NULL
-      );
-    `);
-    console.log(`Table 'user_roles' created in '${dbName}' database.`);
-
-    await pool.query(`
-      CREATE TABLE users (
-        userId SERIAL PRIMARY KEY,
-        emailAddress VARCHAR(256) NOT NULL,
-        firstName VARCHAR(128) NOT NULL,
-        lastName VARCHAR(128) NOT NULL,
-        phone VARCHAR(256) NOT NULL,
-        affiliation VARCHAR(128) NOT NULL,
-        status VARCHAR(128) NOT NULL,
-        lastReservation Date,
-        roleId INT NOT NULL,
-        passwordHash VARCHAR(256) NOT NULL,
-        FOREIGN KEY (roleId) REFERENCES user_roles(roleId)
-      );
-    `);
-    console.log(`Table 'users' created in '${dbName}' database.`);
-
-    await pool.query(`
-      CREATE TABLE site_types (
-        siteTypeId SERIAL PRIMARY KEY,
-        siteType VARCHAR(256) NOT NULL,
-        rate DECIMAL(10, 2) NOT NULL,
-        maxLength INT NOT NULL
-      );
-    `);
-    console.log(`Table 'site_types' created in '${dbName}' database.`);
-
-    await pool.query(`
-      CREATE TABLE sites (
-        siteId SERIAL PRIMARY KEY,
-        siteName VARCHAR(256) NOT NULL,
-        siteTypeId INT NOT NULL,
-        FOREIGN KEY (siteTypeId) REFERENCES site_types(siteTypeId)
-      );
-    `);
-    console.log(`Table 'sites' created in '${dbName}' database.`);
-
-    await pool.query(`
-      CREATE TABLE reservations (
-        reservationId SERIAL PRIMARY KEY,
-        userId INT NOT NULL,
-        siteId INT NOT NULL,
-        startDate Date NOT NULL,
-        endDate Date NOT NULL,
-        notes VARCHAR(256),
-        FOREIGN KEY (userId) REFERENCES users(userId),
-        FOREIGN KEY (siteId) REFERENCES sites(siteId)
-      );
-    `);
-    console.log(`Table 'reservations' created in '${dbName}' database.`);
-
     //INSERT DUMMY DATA
     await pool.query(`
         INSERT INTO site_types
@@ -292,17 +317,6 @@ async function seedDemoUsers() {
     console.error("Error initializing database:", err);
   }
 }
-
-initiateDatabase();
-ensureTables();
-//TODO:remove count table functions
-// async function postCountData(count) {
-//   const result = await pool.query(
-//     'INSERT INTO count_table (value) VALUES ($1) RETURNING *',
-//     [count]
-//   );
-//   return result.rows[0];
-// }
 
 async function getCurrentAvailableSites(start, end) {
   let sql = `
