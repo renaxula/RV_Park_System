@@ -1,5 +1,4 @@
 const pkg = require('pg');
-const bcrypt = require('bcrypt');
 const { Pool, Client } = pkg;
 require('dotenv').config();
 
@@ -23,7 +22,6 @@ const pool = new Pool({
   port: dbPort,
 });
 
-async function ensureDatabaseExists() {
 const roles = {
   role: "customer",
 };
@@ -171,7 +169,7 @@ async function seedDemoUsers() {
     //   );
     // `);
     // console.log(`Table 'count_table' created in '${dbName}' database.`);
-
+    try{
     await pool.query(`
       CREATE TABLE user_roles (
         roleId SERIAL PRIMARY KEY,
@@ -276,15 +274,6 @@ async function seedDemoUsers() {
 }
 
 initiateDatabase();
-
-const pool = new Pool({
-  user: dbUser,
-  host: dbHost,
-  database: dbName,
-  password: dbPassword,
-  port: dbPort,
-});
-
 //TODO:remove count table functions
 // async function postCountData(count) {
 //   const result = await pool.query(
