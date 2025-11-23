@@ -1,3 +1,4 @@
+import CurrentOccupied from "../reports/CurrentOccupied";
 import { Card } from "../ui/Card";
 
 export function OccupiedSitesReport() {
@@ -8,23 +9,17 @@ export function OccupiedSitesReport() {
       <table>
         <thead>
           <tr>
-            <th>Date</th>
             <th>Last Name</th>
             <th>Site</th>
-            <th>Nights</th>
+            <th>Nights Left</th>
             <th>Notes</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>2025-11-01</td>
-            <td>Smith</td>
-            <td>12</td>
-            <td>2</td>
-            <td>Arriving late</td>
-          </tr>
+          <CurrentOccupied />
         </tbody>
       </table>
     </Card>
   );
 }
+//
