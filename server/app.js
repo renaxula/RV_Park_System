@@ -3,6 +3,10 @@ const cors = require('cors');
 const session = require('express-session');
 const PgSession = require('connect-pg-simple')(session);
 const bcrypt = require('bcrypt');
+const app = express();
+const PORT = process.env.PORT || 3000;
+const isProd = process.env.NODE_ENV === 'production';
+
 const {
   pool,
   postCountData,
@@ -11,12 +15,11 @@ const {
   findUserById,
   createUser,
   updateUserPassword,
+  ensureTables,
+  getCurrentAvailableSites,
+  activeReservations
 } = require('./db.js');
 
-const { getCurrentAvailableSites, activeReservations } = require("./db.js");
-const app = express();
-const PORT = process.env.PORT || 3000;
-const isProd = process.env.NODE_ENV === 'production';
 
 app.use(express.json());
 

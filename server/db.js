@@ -1,6 +1,6 @@
-const pkg = require('pg');
+const pkg = require("pg");
 const { Pool, Client } = pkg;
-require('dotenv').config();
+require("dotenv").config();
 
 const dbUser = process.env.POSTGRES_USER;
 const dbPassword = process.env.POSTGRES_PASS;
@@ -94,7 +94,7 @@ async function initiateDatabase() {
   const client = new Client({
     user: createDbUser,
     host: dbHost,
-    database: 'postgres',
+    database: "postgres",
     password: createDbPassword,
     database: "postgres",
     password: dbPassword,
@@ -103,7 +103,10 @@ async function initiateDatabase() {
 
   await client.connect();
   try {
-    const dbCheck = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [dbName]);
+    const dbCheck = await client.query(
+      "SELECT 1 FROM pg_database WHERE datname = $1",
+      [dbName]
+    );
     if (dbCheck.rowCount === 0) {
       await client.query(`CREATE DATABASE ${dbName}`);
       console.log(`Database '${dbName}' created.`);
@@ -142,34 +145,51 @@ async function ensureTables() {
       CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
     );
   `);
-  await pool.query(`CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");`);
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");`
+  );
 }
 
 async function seedDemoUsers() {
   const demoUsers = [
-    { email: 'admin@example.com', username: 'admin', role: 'admin', password: 'Admin!123' },
-    { email: 'employee@example.com', username: 'employee', role: 'employee', password: 'Employee!123' },
-    { email: 'customer@example.com', username: 'customer', role: 'customer', password: 'Customer!123' },
+    {
+      email: "admin@example.com",
+      username: "admin",
+      role: "admin",
+      password: "Admin!123",
+    },
+    {
+      email: "employee@example.com",
+      username: "employee",
+      role: "employee",
+      password: "Employee!123",
+    },
+    {
+      email: "customer@example.com",
+      username: "customer",
+      role: "customer",
+      password: "Customer!123",
+    },
   ];
 
-    // Now connect to the new database to create the tables
-    const pool = new Pool({
-      user: dbUser,
-      host: dbHost,
-      database: dbName,
-      password: dbPassword,
-      port: dbPort,
-    });
+  // Now connect to the new database to create the tables
+  const pool = new Pool({
+    user: dbUser,
+    host: dbHost,
+    database: dbName,
+    password: dbPassword,
+    port: dbPort,
+  });
 
-    // await pool.query(`
-    //   CREATE TABLE count_table (
-    //     id SERIAL PRIMARY KEY,
-    //     value INT NOT NULL,
-    //     created_at TIMESTAMP DEFAULT NOW()
-    //   );
-    // `);
-    // console.log(`Table 'count_table' created in '${dbName}' database.`);
-    try{
+  // await pool.query(`
+  //   CREATE TABLE count_table (
+  //     id SERIAL PRIMARY KEY,
+  //     value INT NOT NULL,
+  //     created_at TIMESTAMP DEFAULT NOW()
+  //   );
+  // `);
+  // console.log(`Table 'count_table' created in '${dbName}' database.`);
+  try {
     await pool.query(`
       CREATE TABLE user_roles (
         roleId SERIAL PRIMARY KEY,
@@ -274,6 +294,7 @@ async function seedDemoUsers() {
 }
 
 initiateDatabase();
+ensureTables();
 //TODO:remove count table functions
 // async function postCountData(count) {
 //   const result = await pool.query(
