@@ -14,8 +14,6 @@ const {
 } = require('./db.js');
 
 const { getCurrentAvailableSites, activeReservations } = require("./db.js");
-const express = require("express");
-const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const isProd = process.env.NODE_ENV === 'production';
@@ -132,20 +130,6 @@ app.get("/api/occupied", async (req, res) => {
   }
 });
 
-// app.post('/server/count', async (req, res) => {
-//   const { count } = req.body;
-//   if (typeof count !== 'number') {
-//     return res.status(400).json({ error: 'Count must be a number' });
-//   }
-
-//   try {
-//     const newRow = await postCountData(count);
-//     res.status(201).json({ message: 'Count saved', data: newRow });
-//   } catch (err) {
-//     console.error('Error saving count:', err);
-//     res.status(500).json({ error: 'Internal server error' });
-//   }
-// });
 
 app.listen(PORT, (error) => {
   if (!error) console.log(`Server is running on http://localhost:${PORT}`);
