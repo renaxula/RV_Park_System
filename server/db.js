@@ -8,13 +8,6 @@ const dbHost = process.env.POSTGRES_HOST;
 const dbPort = process.env.POSTGRES_PORT;
 const dbName = process.env.POSTGRES_DB_NAME;
 
-// Optional elevated credentials just for creating the database if it does not exist.
-// If not provided, we will reuse the normal creds (may fail with permission denied).
-//??? Anyone running this locally should have sudo perms? Then this functionality will be removed in prod?
-//Dropping and creating the database is just a devleopment thing.
-// const createDbUser = process.env.POSTGRES_SUPER_USER || dbUser;
-// const createDbPassword = process.env.POSTGRES_SUPER_PASS || dbPassword;
-
 const pool = new Pool({
   user: dbUser,
   host: dbHost,
@@ -31,14 +24,14 @@ const adminPool = new Pool({
   port: dbPort,
 });
 
-async function initiateDatabase() {
+async function initiateDatabaseAndLoadData() {
   await dropDatabase(dbName);
   await createDatabase();
   await createTables();
-  // loadDemoData();
+  await loadDemoData();
 }
 
-initiateDatabase();
+initiateDatabaseAndLoadData();
 
 async function dropDatabase(dbName) {
   const client = await adminPool.connect();
@@ -113,6 +106,7 @@ async function createTables() {
     CREATE TABLE IF NOT EXISTS users (
       userId SERIAL PRIMARY KEY,
       emailAddress VARCHAR(256) NOT NULL,
+      userName VARCHAR(256) NOT NULL,
       firstName VARCHAR(128) NOT NULL,
       lastName VARCHAR(128) NOT NULL,
       phone VARCHAR(256) NOT NULL,
@@ -121,6 +115,7 @@ async function createTables() {
       lastReservation Date,
       roleId INT NOT NULL,
       passwordHash VARCHAR(256) NOT NULL,
+      salt VARCHAR(256) NOT NULL,
       FOREIGN KEY (roleId) REFERENCES user_roles(roleId)
     );
   `);
@@ -175,74 +170,72 @@ async function createTables() {
   console.log(`Table 'reservations' created in '${dbName}' database.`);
 }
 
-const roles = {
-  role: "customer",
-};
+async function loadDemoData(){  
+  const user = {
+    emailAddress: "mail@mail.com",
+    username: "jdoe",
+    firstName: "John",
+    lastName: "Doe",
+    phone: "8013658521",
+    affiliation: "Air Force",
+    status: "Active Duty",
+    roleId: 1,
+    salt: "dingle",
+    password: "12345",
+  };
+  
+  const site_types = {
+    siteType: "small RV parking",
+    rate: 25.0,
+    maxLength: 40,
+  };
+  
+  const sites = [
+    {
+      siteName: "1",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "2",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "3",
+      siteTypeId: 1,
+    },
+  ];
+  
+  const reservations = [
+    {
+      userId: 1,
+      siteId: 1,
+      startDate: "2025-11-1",
+      endDate: "2025-11-14",
+      notes: "test 1-1",
+    },
+    {
+      userId: 1,
+      siteId: 1,
+      startDate: "2025-11-14",
+      endDate: "2025-11-20",
+      notes: "test 1-2",
+    },
+    {
+      userId: 1,
+      siteId: 2,
+      startDate: "2025-11-5",
+      endDate: "2025-11-14",
+      notes: "test 2-1",
+    },
+    {
+      userId: 1,
+      siteId: 2,
+      startDate: "2025-11-25",
+      endDate: "2025-11-30",
+      notes: "test 2-2",
+    },
+  ];
 
-const user = {
-  emailAddress: "mail@mail.com",
-  firstName: "John",
-  lastName: "Doe",
-  phone: "8013658521",
-  affiliation: "Air Force",
-  status: "Active Duty",
-  roleId: 1,
-  passwordHash: "FAKEHASH",
-};
-
-const site_types = {
-  siteType: "small RV parking",
-  rate: 25.0,
-  maxLength: 40,
-};
-
-const sites = [
-  {
-    siteName: "1",
-    siteTypeId: 1,
-  },
-  {
-    siteName: "2",
-    siteTypeId: 1,
-  },
-  {
-    siteName: "3",
-    siteTypeId: 1,
-  },
-];
-
-const reservations = [
-  {
-    userId: 1,
-    siteId: 1,
-    startDate: "2025-11-1",
-    endDate: "2025-11-14",
-    notes: "test 1-1",
-  },
-  {
-    userId: 1,
-    siteId: 1,
-    startDate: "2025-11-14",
-    endDate: "2025-11-20",
-    notes: "test 1-2",
-  },
-  {
-    userId: 1,
-    siteId: 2,
-    startDate: "2025-11-5",
-    endDate: "2025-11-14",
-    notes: "test 2-1",
-  },
-  {
-    userId: 1,
-    siteId: 2,
-    startDate: "2025-11-25",
-    endDate: "2025-11-30",
-    notes: "test 2-2",
-  },
-];
-
-async function seedDemoUsers() {
   const demoUsers = [
     {
       email: "admin@example.com",
@@ -264,17 +257,11 @@ async function seedDemoUsers() {
     },
   ];
 
-  // Now connect to the new database to create the tables
-  const pool = new Pool({
-    user: dbUser,
-    host: dbHost,
-    database: dbName,
-    password: dbPassword,
-    port: dbPort,
-  });
+  const roles = {
+    role: "customer",
+  };
 
   try {
-    //INSERT DUMMY DATA
     await pool.query(`
         INSERT INTO site_types
         VALUES ( DEFAULT, '${site_types.siteType}', ${site_types.rate}, ${site_types.maxLength});
@@ -282,7 +269,6 @@ async function seedDemoUsers() {
     console.log("Dummy site type 'small RV parking' inserted");
 
     for (const site of sites) {
-      //console.log(site);
       await pool.query(`
         INSERT INTO sites (siteName, siteTypeId)
         VALUES ('${site.siteName}', ${site.siteTypeId});
@@ -296,9 +282,10 @@ async function seedDemoUsers() {
       `);
     console.log(`Dummy role '${roles.role}' inserted`);
 
+
     await pool.query(`
-        INSERT INTO users (emailAddress, firstName, lastName, phone, affiliation, status, roleId, passwordHash)
-        VALUES ('${user.emailAddress}', '${user.firstName}', '${user.lastName}', '${user.phone}', '${user.affiliation}', '${user.status}', ${user.roleId}, '${user.passwordHash}' );
+        INSERT INTO users (emailAddress, username, firstName, lastName, phone, affiliation, status, roleId, passwordHash, salt)
+        VALUES ('${user.emailAddress}', '${user.username}', '${user.firstName}', '${user.lastName}', '${user.phone}', '${user.affiliation}', '${user.status}', ${user.roleId}, md5('${user.password + user.salt}'), '${user.salt}' );
       `);
     console.log(`Dummy user '${user.firstName}' inserted`);
 
