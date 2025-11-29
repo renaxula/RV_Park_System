@@ -86,14 +86,6 @@ async function testConnection() {
 }
 
 async function createTables() {
-  // Basic data table used by the existing sample endpoint.
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS count_table (
-      id SERIAL PRIMARY KEY,
-      value INT NOT NULL,
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_roles (
@@ -192,8 +184,8 @@ async function loadDemoData(){
     affiliation: "Air Force",
     status: "Active Duty",
     roleId: 1,
-    salt: "dingle",
-    password: "12345",
+    salt: "randomSalt",
+    password: "1234",
   };
   
   const site_types = {
@@ -393,10 +385,10 @@ async function findUserByUsername(username) {
 
 async function findUserById(id) {
   const result = await pool.query(
-    `SELECT id, emailAddress, username, passwordHash, ur.role 
+    `SELECT userId, emailAddress, username, passwordHash, ur.role, salt
     FROM users u JOIN
     user_roles ur ON ur.roleid = u.roleid
-    WHERE id = $1`,
+    WHERE userId = $1`,
     [id]
   );
   return result.rows[0] || null;
@@ -406,7 +398,7 @@ async function findUserByEmail(email) {
   const normalized = email?.trim().toLowerCase();
   if (!normalized) return null;
   const result = await pool.query(
-    `SELECT userId, emailAddress, username, passwordHash, ur.role 
+    `SELECT userId, emailAddress, username, passwordHash, ur.role, salt
     FROM users u JOIN
     user_roles ON ur.roleid = u.roleid
     WHERE emailAddress = $1`,
@@ -434,7 +426,7 @@ async function createUser({ email, username, passwordHash, role = 'customer' }) 
 }
 
 async function updateUserPassword(userId, passwordHash) {
-  await pool.query('UPDATE users SET passwordHash = $1 WHERE id = $2', [passwordHash, userId]);
+  await pool.query('UPDATE users SET passwordHash = $1 WHERE userid = $2', [passwordHash, userId]);
 }
 
 module.exports = {
