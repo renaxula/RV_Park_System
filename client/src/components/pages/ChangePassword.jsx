@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { Card } from "../ui/Card";
+import { StyledButton } from "../ui/StyledButton";
+import styled from "styled-components";
+import { Link } from "react-router-dom";
+import { useAuth } from "../router/AuthContext";
 
 export function ChangePassword() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -8,6 +12,7 @@ export function ChangePassword() {
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const { homePage } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,23 +44,23 @@ export function ChangePassword() {
   };
 
   return (
-    <Card>
-      <h2>Change Your Password</h2>
-      <form onSubmit={handleSubmit}>
-        <label>
+    <ChangePasswordCard>
+      <Title>Change Your Password</Title>
+      <br />
+      <Form onSubmit={handleSubmit}>
+        <Label>
           Current Password:
-          <input
+          <Input
             type="password"
             name="currentPassword"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             required
           />
-        </label>
-        <br />
-        <label>
+        </Label>
+        <Label>
           New Password:
-          <input
+          <Input
             type="password"
             name="newPassword"
             value={newPassword}
@@ -63,11 +68,10 @@ export function ChangePassword() {
             onChange={(e) => setNewPassword(e.target.value)}
             required
           />
-        </label>
-        <br />
-        <label>
+        </Label>
+        <Label>
           Confirm New Password:
-          <input
+          <Input
             type="password"
             name="confirmPassword"
             value={confirmPassword}
@@ -75,14 +79,69 @@ export function ChangePassword() {
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
           />
-        </label>
-        <br />
+        </Label>
         {error && <p style={{ color: "red" }}>{error}</p>}
         {message && <p style={{ color: "green" }}>{message}</p>}
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Updating..." : "Change Password"}
-        </button>
-      </form>
-    </Card>
+        <LoginButtonContainer>
+          <Link to={homePage}><StyledButton>{`\< Return`}</StyledButton></Link>
+          <StyledButton emphasize={true} type="submit" disabled={submitting}>
+            {submitting ? "Updating..." : "Change Password"}
+          </StyledButton>
+        </LoginButtonContainer>
+      </Form>
+    </ChangePasswordCard>
   );
 }
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
+
+const Title = styled.h2`
+  margin: 0 0 4px 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #0f172a;
+`;
+
+const Label = styled.label`
+  font-size: 0.875rem;
+  color: #475569;
+  font-weight: 600;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.95rem;
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+  box-shadow: 0 1px 0 rgba(2, 6, 23, 0.02);
+
+  &:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.9);
+    box-shadow: 0 6px 18px rgba(59, 130, 246, 0.08);
+  }
+`;
+
+const ChangePasswordCard = styled(Card)`
+  width: 40%;
+  p {
+    text-align: center;
+  }
+`;
+
+const LoginButtonContainer = styled.div`
+  margin: auto;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+`;
