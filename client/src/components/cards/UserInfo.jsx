@@ -4,7 +4,7 @@ import styled from "styled-components";
 import { StyledButton } from "../ui/StyledButton";
 
 export function UserInfo(){
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     return <UserCard>
         <Layout>
             <ProfileIcon/>
@@ -13,7 +13,7 @@ export function UserInfo(){
                     {user?.username ?? ''}
                 </h2>
                 <Buttons>
-                    <StyledButton emphasize={true}>Logout</StyledButton>
+                    <StyledButton emphasize={true} onClick={logout}>Logout</StyledButton>
                     <StyledButton>Change Password</StyledButton>
                 </Buttons>
             </Info>
