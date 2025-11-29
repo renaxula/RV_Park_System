@@ -7,18 +7,17 @@ import { StyledButton } from "../ui/StyledButton";
 
 export function Register() {
   const navigate = useNavigate();
-  const { register, setError, error, isAuthenticated } = useAuth();
+  const { register, setError, error, isAuthenticated, homePage } = useAuth();
 
   const [form, setForm] = useState({
-    email: "",
-    username: "",
-    password: "",
-    firstName: "",
-    lastName: "",
-    phone: "",
-    affiliation: "",
-    status: "",
-    salt: "",
+    email: "alex@test.com",
+    username: "aschott",
+    password: "12341234",
+    firstName: "Alex",
+    lastName: "Schott",
+    phone: "8015555555",
+    affiliation: "Navy",
+    status: "Retired",
   });
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -39,13 +38,9 @@ export function Register() {
     }
     setSubmitting(true);
     setError(null);
-    setForm((prev) => ({
-      ...prev,
-      ["salt"]: crypto.randomBytes(16).toString("hex"),
-    }));
     try {
       await register(form);
-      navigate("/");
+      navigate(homePage ?? '/customer-dash');
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Registration failed");

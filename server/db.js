@@ -461,7 +461,7 @@ async function findUserByEmail(email) {
   const result = await pool.query(
     `SELECT userId, emailAddress, username, passwordHash, ur.role, salt
     FROM users u JOIN
-    user_roles ON ur.roleid = u.roleid
+    user_roles ur ON ur.roleid = u.roleid
     WHERE emailAddress = $1`,
     [normalized]
   );
@@ -471,24 +471,55 @@ async function findUserByEmail(email) {
 async function createUser({
   email,
   username,
-  passwordHash,
+  firstName,
+  lastName,
+  phone,
+  affiliation,
+  status,
+  password,
   role = "customer",
 }) {
+
+  console.log("First name: ", lastName)
   const normalizedEmail = email.trim().toLowerCase();
   const normalizedUsername = username.trim().toLowerCase();
+  const normalizedFirstName = firstName.trim().toLowerCase();
+  const normalizedLastName = lastName.trim().toLowerCase();
+  const normalizedAffiliation = affiliation.trim().toLowerCase();
+  const normalizedStatus = status.trim().toLowerCase();
+  const salt = await bcrypt.genSalt(12);
 
-  // const result = await pool.query(
-  //   `INSERT INTO users (
-  //     emailAddress,
-  //     username,
-  //     passwordHash,
-  //     roleid
-  //    )
-  //    VALUES (${email}, ${username}, ${passwordHash}, (SELECT DISTINCT roleid from user_roles where role = ${role}))
-  //    RETURNING id, emailAddress, username, roleid, created_at`,
-  // );
-
-  // return result.rows[0];
+  const result = await pool.query(
+    `INSERT INTO users (
+    emailAddress,
+    firstName,
+    lastName,
+    phone,
+    affiliation,
+    status,
+    username,
+    passwordHash,
+    roleid,
+    salt
+   )
+   VALUES (
+    '${normalizedEmail}',
+    '${normalizedFirstName}',
+    '${normalizedLastName}',
+    ${phone},
+    '${normalizedAffiliation}',
+    '${normalizedStatus}',
+    '${normalizedUsername}',
+    '${await bcrypt.hash(password + salt, 12)}',
+    (SELECT DISTINCT roleid from user_roles where role = '${role}'),
+    '${salt}')
+   RETURNING userid, emailAddress, username`
+  );
+  const resultWithRole = {
+    ...result.rows[0],
+    "role": role
+  }
+  return resultWithRole;
 }
 
 async function updateUserPassword(userId, passwordHash) {

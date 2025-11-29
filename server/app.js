@@ -92,11 +92,11 @@ app.get("/", (req, res) => {
 });
 
 app.post("/auth/register", async (req, res) => {
-  const { email, username, password } = req.body || {};
-  if (!email || !username || !password) {
+  const { email, username, password, firstName, lastName, phone, affiliation, status } = req.body || {};
+  if (!email || !username || !password || !firstName || !lastName || !phone || !affiliation || !status) {
     return res
       .status(400)
-      .json({ error: "Email, username, and password are required" });
+      .json({ error: "Required fields are missing" });
   }
   if (password.length < 8) {
     return res
@@ -113,9 +113,9 @@ app.post("/auth/register", async (req, res) => {
     if (existingEmail)
       return res.status(409).json({ error: "Email already in use" });
 
-    const passwordHash = await bcrypt.hash(password, 12);
-    const newUser = await createUser({ email, username, passwordHash });
+    const newUser = await createUser({ email, username, password, firstName, lastName, phone, affiliation, status });
 
+    console.log("new User:", newUser);
     await establishSession(req, newUser);
 
     res.status(201).json({

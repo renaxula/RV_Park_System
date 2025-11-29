@@ -1,10 +1,18 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import axios from "axios";
 
 const AuthContext = createContext(null);
 
 const API_BASE =
-  import.meta?.env?.VITE_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:3000";
+  import.meta?.env?.VITE_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:3000";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -74,7 +82,14 @@ export function AuthProvider({ children }) {
       logout,
       hasRole,
       isAuthenticated: !!user,
-      homePage: user?.role === 'customer' ? '/customer-dash' : (user?.role === 'admin' ? '/admin-dash' : '/employee-dash')
+      homePage:
+          user?.role === "customer"
+          ? "/customer-dash"
+          : user?.role === "admin"
+          ? "/admin-dash"
+          : user?.role === "employee"
+          ? "/employee-dash"
+          : "/customer-dash"
     };
   }, [error, loading, logout, register, user, login]);
 
