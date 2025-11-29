@@ -3,6 +3,7 @@ import { AdminDashboard } from "../pages/AdminDashboard";
 import { AvailableSpots } from "../pages/AvailableSpots";
 import { ChangePassword } from "../pages/ChangePassword";
 import { ChangeRates } from "../pages/ChangeRates";
+import { CustomerDash } from "../pages/CustomerDash";
 import { ElevateDemote } from "../pages/ElevateDemote";
 import { EmployeeReservation } from "../pages/EmployeeReservation";
 import { Login } from "../pages/Login";
@@ -15,7 +16,13 @@ import { ResetPassword } from "../pages/ResetPassword";
 import { ViewReservations } from "../pages/ViewReservations";
 
 export const routesConfig = [
-  { path: "/", label: "Home", requiredRole: "customer", Component: App, showInNav: true },
+  {
+    path: "/",
+    label: "Home",
+    requiredRole: "customer",
+    Component: App,
+    showInNav: true,
+  },
   {
     path: "/login",
     label: "Login",
@@ -113,5 +120,12 @@ export const routesConfig = [
     requiredRole: "admin",
     Component: ChangeRates,
     showInNav: true,
+  },
+  {
+    path: "/customer-dash",
+    label: "Home",
+    requiredRole: "customer",
+    Component: CustomerDash,
+    // showInNav: true,
   },
 ];

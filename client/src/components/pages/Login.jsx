@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect} from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { Card } from "../ui/Card";
 import { useAuth } from "../router/AuthContext";
 
 export function Login() {
-  const { login, setError, error, isAuthenticated } = useAuth();
+  const { login, setError, error, isAuthenticated, user } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -12,9 +12,21 @@ export function Login() {
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
 
+
+  useEffect(() => {
+    if(user !== null){
+      if(user.role === 'customer'){
+        console.log('Navigating'); 
+        navigate('/customer-dash');
+      }
+    }
+  }, [user]);
+
   if (isAuthenticated) {
     return <Card><p>You are already signed in.</p></Card>;
   }
+
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,7 +34,6 @@ export function Login() {
     setError(null);
     try {
       await login({ username, password });
-      navigate(from, { replace: true });
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Login failed");
@@ -30,6 +41,7 @@ export function Login() {
       setSubmitting(false);
     }
   };
+
 
   return (
     <Card>
