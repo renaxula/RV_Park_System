@@ -158,7 +158,6 @@ app.post('/auth/login', async (req, res) => {
 });
 
 app.get('/auth/me', (req, res) => {
-  console.log(req.session);
   if (!req.session.userId) {
     return res.status(200).json({ user: null });
   }
