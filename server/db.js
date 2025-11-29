@@ -86,7 +86,6 @@ async function testConnection() {
 }
 
 async function createTables() {
-
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_roles (
       roleId SERIAL PRIMARY KEY,
@@ -493,7 +492,10 @@ async function createUser({
 }
 
 async function updateUserPassword(userId, passwordHash) {
-  await pool.query('UPDATE users SET passwordHash = $1 WHERE userid = $2', [passwordHash, userId]);
+  await pool.query("UPDATE users SET passwordHash = $1 WHERE userid = $2", [
+    passwordHash,
+    userId,
+  ]);
 }
 
 module.exports = {

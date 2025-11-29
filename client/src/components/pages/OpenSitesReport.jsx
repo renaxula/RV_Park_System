@@ -6,8 +6,8 @@ export function OpenSitesReport() {
     <Card>
       <h2>Open Sites Report</h2>
       <p>
-        Shows which sites are available, nights available, hook-up,
-        and rate per night for each date.
+        Shows which sites are available, nights available, and rate per night
+        for each date.
       </p>
       <CurrentAvailability />
     </Card>
