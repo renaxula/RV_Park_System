@@ -115,7 +115,7 @@ export function MapAndRules() {
               <li>
                 The sewer drain connection on the unit must be gas tight and
                 leak-free. Hose must be constructed of minimum schedule 40 ABS
-                plastic approved for train and
+                plastic approved for drain and waste
               </li>
             </ul>
           </RuleSection>
