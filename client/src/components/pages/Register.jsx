@@ -10,14 +10,14 @@ export function Register() {
   const { register, setError, error, isAuthenticated, homePage } = useAuth();
 
   const [form, setForm] = useState({
-    email: "alex@test.com",
-    username: "aschott",
-    password: "12341234",
-    firstName: "Alex",
-    lastName: "Schott",
-    phone: "8015555555",
-    affiliation: "Navy",
-    status: "Retired",
+    email: "",
+    username: "",
+    password: "",
+    firstName: "",
+    lastName: "",
+    phone: "",
+    affiliation: "",
+    status: "",
   });
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
