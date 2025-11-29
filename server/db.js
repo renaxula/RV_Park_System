@@ -366,4 +366,56 @@ async function activeReservations(date) {
   return results.rows;
 }
 
-module.exports = { getCurrentAvailableSites, activeReservations };
+async function findUserByUsername(username) {
+  const normalized = username?.trim().toLowerCase();
+  if (!normalized) return null;
+  const result = await pool.query(
+    'SELECT id, email, username, password_hash, role FROM users WHERE username = $1',
+    [normalized]
+  );
+  return result.rows[0] || null;
+}
+
+async function findUserById(id) {
+  const result = await pool.query(
+    'SELECT id, email, username, password_hash, role FROM users WHERE id = $1',
+    [id]
+  );
+  return result.rows[0] || null;
+}
+
+async function findUserByEmail(email) {
+  const normalized = email?.trim().toLowerCase();
+  if (!normalized) return null;
+  const result = await pool.query(
+    'SELECT id, email, username, password_hash, role FROM users WHERE email = $1',
+    [normalized]
+  );
+  return result.rows[0] || null;
+}
+
+async function createUser({ email, username, passwordHash, role = 'customer' }) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedUsername = username.trim().toLowerCase();
+
+  const result = await pool.query(
+    'INSERT INTO users (email, username, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, email, username, role, created_at',
+    [normalizedEmail, normalizedUsername, passwordHash, role]
+  );
+
+  return result.rows[0];
+}
+
+async function updateUserPassword(userId, passwordHash) {
+  await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, userId]);
+}
+
+module.exports = {
+  findUserByUsername,
+  findUserByEmail,
+  findUserById,
+  createUser,
+  updateUserPassword,
+  getCurrentAvailableSites,
+  activeReservations  
+};
