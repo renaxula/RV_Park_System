@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const CurrentOccupied = () => {
+const CurrentOccupied = (props) => {
   const [rows, setRows] = useState([]);
 
   useEffect(() => {

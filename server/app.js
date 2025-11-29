@@ -1,8 +1,8 @@
-const express = require('express');
-const cors = require('cors');
-const session = require('express-session');
-const PgSession = require('connect-pg-simple')(session);
-const bcrypt = require('bcrypt');
+const express = require("express");
+const cors = require("cors");
+const session = require("express-session");
+const PgSession = require("connect-pg-simple")(session);
+const bcrypt = require("bcrypt");
 
 const {
   pool,
@@ -12,11 +12,13 @@ const {
   findUserById,
   createUser,
   updateUserPassword,
-} = require('./db.js');
+  getCurrentAvailableSites,
+  activeReservations,
+} = require("./db.js");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = process.env.NODE_ENV === "production";
 
 app.use(express.json());
 
@@ -27,22 +29,22 @@ app.use(
   })
 );
 
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
 
 app.use(
   session({
     store: new PgSession({
       pool,
-      tableName: 'session',
+      tableName: "session",
     }),
-    secret: process.env.SESSION_SECRET || 'change_me_session_secret',
+    secret: process.env.SESSION_SECRET || "change_me_session_secret",
     resave: false,
     saveUninitialized: false,
-    name: 'rvp.sid',
+    name: "rvp.sid",
     cookie: {
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 4, // 4 hours
-      sameSite: 'lax',
+      sameSite: "lax",
       secure: isProd, // enable when behind HTTPS
     },
   })
@@ -56,7 +58,7 @@ app.use((req, res, next) => {
 
 function requireAuth(req, res, next) {
   if (!req.session.userId) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ error: "Unauthorized" });
   }
   next();
 }
@@ -64,7 +66,7 @@ function requireAuth(req, res, next) {
 function requireRole(role) {
   return (req, res, next) => {
     if (!req.session.userId || req.session.role !== role) {
-      return res.status(403).json({ error: 'Forbidden' });
+      return res.status(403).json({ error: "Forbidden" });
     }
     next();
   };
@@ -85,34 +87,39 @@ function establishSession(req, user) {
   });
 }
 
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   res.status(200).send("Welcome to root URL of Server");
 });
 
-app.post('/auth/register', async (req, res) => {
+app.post("/auth/register", async (req, res) => {
   const { email, username, password } = req.body || {};
   if (!email || !username || !password) {
-    return res.status(400).json({ error: 'Email, username, and password are required' });
+    return res
+      .status(400)
+      .json({ error: "Email, username, and password are required" });
   }
   if (password.length < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    return res
+      .status(400)
+      .json({ error: "Password must be at least 8 characters" });
   }
 
   try {
     const existingUsername = await findUserByUsername(username);
-    if (existingUsername) return res.status(409).json({ error: 'Username already in use' });
+    if (existingUsername)
+      return res.status(409).json({ error: "Username already in use" });
 
     const existingEmail = await findUserByEmail(email);
-    if (existingEmail) return res.status(409).json({ error: 'Email already in use' });
+    if (existingEmail)
+      return res.status(409).json({ error: "Email already in use" });
 
     const passwordHash = await bcrypt.hash(password, 12);
     const newUser = await createUser({ email, username, passwordHash });
 
-    
     await establishSession(req, newUser);
 
     res.status(201).json({
-      message: 'Registered and logged in',
+      message: "Registered and logged in",
       user: {
         userId: newUser.userId,
         email: newUser.email,
@@ -121,28 +128,34 @@ app.post('/auth/register', async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('Error registering user:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error registering user:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
-app.post('/auth/login', async (req, res) => {
+app.post("/auth/login", async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password are required' });
+    return res
+      .status(400)
+      .json({ error: "Username and password are required" });
   }
 
   try {
     const user = await findUserByUsername(username);
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
-    const validPassword = await bcrypt.compare(password+user.salt, user.passwordhash);
-    if (!validPassword) return res.status(401).json({ error: 'Invalid credentials' });
+    const validPassword = await bcrypt.compare(
+      password + user.salt,
+      user.passwordhash
+    );
+    if (!validPassword)
+      return res.status(401).json({ error: "Invalid credentials" });
 
     await establishSession(req, user);
 
     res.json({
-      message: 'Logged in',
+      message: "Logged in",
       user: {
         userId: user.userId,
         email: user.email,
@@ -150,14 +163,13 @@ app.post('/auth/login', async (req, res) => {
         role: user.role,
       },
     });
-
   } catch (err) {
-    console.error('Error logging in:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error logging in:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
-app.get('/auth/me', (req, res) => {
+app.get("/auth/me", (req, res) => {
   if (!req.session.userId) {
     return res.status(200).json({ user: null });
   }
@@ -170,95 +182,146 @@ app.get('/auth/me', (req, res) => {
   });
 });
 
-app.post('/auth/logout', (req, res) => {
+app.post("/auth/logout", (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      console.error('Error destroying session:', err);
-      return res.status(500).json({ error: 'Could not log out' });
+      console.error("Error destroying session:", err);
+      return res.status(500).json({ error: "Could not log out" });
     }
-    res.clearCookie('rvp.sid');
-    res.json({ message: 'Logged out' });
+    res.clearCookie("rvp.sid");
+    res.json({ message: "Logged out" });
   });
 });
 
-app.post('/auth/password', requireAuth, async (req, res) => {
+app.post("/auth/password", requireAuth, async (req, res) => {
   const { currentPassword, newPassword } = req.body || {};
   if (!currentPassword || !newPassword) {
-    return res.status(400).json({ error: 'Current and new passwords are required' });
+    return res
+      .status(400)
+      .json({ error: "Current and new passwords are required" });
   }
   if (newPassword.length < 8) {
-    return res.status(400).json({ error: 'New password must be at least 8 characters' });
+    return res
+      .status(400)
+      .json({ error: "New password must be at least 8 characters" });
   }
 
   try {
     const user = await findUserById(req.session.userId);
-    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-    const validPassword = await bcrypt.compare(currentPassword+user.salt, user.passwordhash);
-    if (!validPassword) return res.status(401).json({ error: 'Invalid current password' });
+    const validPassword = await bcrypt.compare(
+      currentPassword + user.salt,
+      user.passwordhash
+    );
+    if (!validPassword)
+      return res.status(401).json({ error: "Invalid current password" });
 
-    const passwordHash = await bcrypt.hash(newPassword+user.salt, 12);
+    const passwordHash = await bcrypt.hash(newPassword + user.salt, 12);
     await updateUserPassword(user.userid, passwordHash);
 
-    res.json({ message: 'Password updated' });
+    res.json({ message: "Password updated" });
   } catch (err) {
-    console.error('Error updating password:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error updating password:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // Admin-only endpoint to set a temporary password for any user by username or email.
-app.post('/admin/reset-password', requireRole('admin'), async (req, res) => {
+app.post("/admin/reset-password", requireRole("admin"), async (req, res) => {
   const { account, newPassword } = req.body || {};
   if (!account || !newPassword) {
-    return res.status(400).json({ error: 'Account and new password are required' });
+    return res
+      .status(400)
+      .json({ error: "Account and new password are required" });
   }
   if (newPassword.length < 8) {
-    return res.status(400).json({ error: 'New password must be at least 8 characters' });
+    return res
+      .status(400)
+      .json({ error: "New password must be at least 8 characters" });
   }
 
   try {
     const targetAccount = account.trim().toLowerCase();
-    const user =
-      targetAccount.includes('@')
-        ? await findUserByEmail(targetAccount)
-        : await findUserByUsername(targetAccount);
+    const user = targetAccount.includes("@")
+      ? await findUserByEmail(targetAccount)
+      : await findUserByUsername(targetAccount);
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
     await updateUserPassword(user.userId, passwordHash);
 
     res.json({
-      message: 'Temporary password set',
+      message: "Temporary password set",
       user: { userId: user.userId, username: user.username, role: user.role },
     });
   } catch (err) {
-    console.error('Error resetting password:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error resetting password:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
-app.post('/server/count', requireAuth, async (req, res) => {
+app.post("/server/count", requireAuth, async (req, res) => {
   const { count } = req.body;
-  if (typeof count !== 'number') {
-    return res.status(400).json({ error: 'Count must be a number' });
+  if (typeof count !== "number") {
+    return res.status(400).json({ error: "Count must be a number" });
   }
 
   try {
     const newRow = await postCountData(count);
-    res.status(201).json({ message: 'Count saved', data: newRow });
+    res.status(201).json({ message: "Count saved", data: newRow });
   } catch (err) {
-    console.error('Error saving count:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error saving count:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+//please dont delete this again...
+app.get("/api/availableSites", async (req, res) => {
+  let { startDate, endDate } = req.query;
+  if (!startDate) {
+    // get TODAY
+    const today = new Date();
+    startDate = today.toISOString().slice(0, 10);
+  }
+  if (!endDate) {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + 1);
+    endDate = d.toISOString().slice(0, 10); //if blank we assume we only care about the start day.
+  }
+
+  try {
+    const results = await getCurrentAvailableSites(startDate, endDate);
+    console.log("Available Report Sent");
+    res.json(results);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database Error" });
+  }
+});
+
+app.get("/api/occupied", async (req, res) => {
+  let { date } = req.query;
+  if (!date) {
+    //if date not provided use today
+    const today = new Date();
+    startDate = today.toISOString().slice(0, 10);
+  }
+
+  try {
+    const results = await activeReservations(date);
+    console.log("Occupied Report Sent");
+    res.json(results);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database Error" });
   }
 });
 
 app.listen(PORT, (error) => {
-  if (!error)
-    console.log(`Server is running on http://localhost:${PORT}`);
-  else
-    console.log("Error occurred, server can't start:", error);
+  if (!error) console.log(`Server is running on http://localhost:${PORT}`);
+  else console.log("Error occurred, server can't start:", error);
 });

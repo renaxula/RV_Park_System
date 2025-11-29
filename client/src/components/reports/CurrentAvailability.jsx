@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-function CurrentAvailability() {
+function CurrentAvailability(props) {
   const [rows, setRows] = useState([]);
 
   useEffect(() => {
@@ -21,6 +21,7 @@ function CurrentAvailability() {
   return (
     <>
       <ul>
+        {rows.length == 0 && <p>No Open Sites</p>}
         {rows.map((row) => (
           <li key={row.siteid}>
             Site {row.sitename} — {row.sitetype} — ${row.rate}/night — Days
