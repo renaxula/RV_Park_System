@@ -4,15 +4,19 @@ import bg from "../../assets/background.png";
 import { routesConfig } from "./routesConfig";
 import { Card } from "../ui/Card";
 import { useAuth } from "./AuthContext";
+import { UserInfo } from "../cards/UserInfo";
 
 export function PageContent(){
-
-    const { user } = useAuth();
     return (<Page>
               <Content>
-                {/* <header>
-                  <NavMenu />
-                </header> */}
+                <Title>
+                    <header>
+                        <h2>FamCamp</h2>
+                        <h5>At Hill Airforce Base</h5>
+                    </header>
+
+                    <UserInfo/>
+                </Title>
                 <Layout>
                   <Routes>
                     {routesConfig.map(({ path, Component, requiredRole }) => {
@@ -111,4 +115,17 @@ const Layout = styled.main`
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
+`;
+
+const Title = styled.div`
+    header {
+        font-size: 2rem;
+        text-align: left;
+        color: black;
+        margin-right: auto;
+    }
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 `;

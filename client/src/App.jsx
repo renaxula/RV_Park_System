@@ -2,6 +2,7 @@ import "./App.css";
 import { Link } from "react-router-dom";
 import { Card } from "./components/ui/Card";
 import { useAuth } from "./components/router/AuthContext";
+import styled from "styled-components";
 
 const quickLinks = [
   { label: "Make a Reservation", path: "/make-reservation", requiredRole: "customer" },
@@ -25,13 +26,6 @@ function App() {
 
   return (
     <>
-      <h1>Welcome to the RV Park Reservation System</h1>
-      <p>
-        {user
-          ? `Signed in as ${user.username} (${user.role}).`
-          : "You are not signed in. Please login or register to continue."}
-      </p>
-
       <Card>
         <h3>Actions available to you</h3>
         {user ? (
@@ -55,5 +49,7 @@ function App() {
     </>
   );
 }
+
+
 
 export default App;
