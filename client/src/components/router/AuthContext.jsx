@@ -74,6 +74,7 @@ export function AuthProvider({ children }) {
       logout,
       hasRole,
       isAuthenticated: !!user,
+      homePage: user?.role === 'customer' ? '/customer-dash' : (user?.role === 'admin' ? '/admin-dash' : '/employee-dash')
     };
   }, [error, loading, logout, register, user, login]);
 
