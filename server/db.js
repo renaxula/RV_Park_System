@@ -183,18 +183,45 @@ async function createTables() {
 }
 
 async function loadDemoData() {
-  const user = {
-    emailAddress: "mail@mail.com",
-    username: "jdoe",
-    firstName: "John",
-    lastName: "Doe",
-    phone: "8013658521",
-    affiliation: "Air Force",
-    status: "Active Duty",
-    roleId: 1,
-    salt: "dingle",
-    password: "12345",
-  };
+  const users = [
+    {
+      emailAddress: "mail@mail.com",
+      username: "jdoe",
+      firstName: "John",
+      lastName: "Doe",
+      phone: "8013658521",
+      affiliation: "Air Force",
+      status: "Active Duty",
+      roleId: 1,
+      salt: "dingle",
+      password: "12345",
+    },
+    {
+      // Feel free to change any of the following user details, I just copy pasted the above mostly
+      emailAddress: "mail2@mail.com",
+      username: "employee1",
+      firstName: "EMPLOYEE",
+      lastName: "DUMMY",
+      phone: "8013658521",
+      affiliation: "Air Force",
+      status: "Active Duty",
+      roleId: 2,
+      salt: "dingle",
+      password: "password",
+    },
+    {
+      emailAddress: "mail3@mail.com",
+      username: "admin",
+      firstName: "ADMIN",
+      lastName: "DUMMY",
+      phone: "1111111111",
+      affiliation: "Air Force",
+      status: "Active Duty",
+      roleId: 3,
+      salt: "dingle",
+      password: "admin",
+    },
+  ];
 
   const site_types = {
     siteType: "small RV parking",
@@ -304,12 +331,14 @@ async function loadDemoData() {
       console.log(`Dummy role '${r.role}' inserted`);
     }
 
-    const passwordHash = await bcrypt.hash(user.password + user.salt, 12);
-    await pool.query(`
+    for (const u of users) {
+      const passwordHash = await bcrypt.hash(u.password + u.salt, 12);
+      await pool.query(`
         INSERT INTO users (emailAddress, username, firstName, lastName, phone, affiliation, status, roleId, passwordHash, salt)
-        VALUES ('${user.emailAddress}', '${user.username}', '${user.firstName}', '${user.lastName}', '${user.phone}', '${user.affiliation}', '${user.status}', ${user.roleId}, '${passwordHash}', '${user.salt}' );
+        VALUES ('${u.emailAddress}', '${u.username}', '${u.firstName}', '${u.lastName}', '${u.phone}', '${u.affiliation}', '${u.status}', ${u.roleId}, '${passwordHash}', '${u.salt}' );
       `);
-    console.log(`Dummy user '${user.firstName}' inserted`);
+      console.log(`Dummy user '${u.firstName}' inserted`);
+    }
 
     for (const res of reservations) {
       //console.log(res);
