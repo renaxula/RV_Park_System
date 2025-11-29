@@ -1,8 +1,7 @@
 const pkg = require("pg");
 const { Pool } = pkg;
 require("dotenv").config();
-const bcrypt = require('bcrypt');
-
+const bcrypt = require("bcrypt");
 
 const dbUser = process.env.POSTGRES_USER;
 const dbPassword = process.env.POSTGRES_PASS;
@@ -38,7 +37,8 @@ initiateDatabaseAndLoadData();
 async function dropDatabase(dbName) {
   const client = await adminPool.connect();
   try {
-    await client.query(`
+    await client.query(
+      `
       SELECT pg_terminate_backend(pid)
       FROM pg_stat_activity
       WHERE datname = $1
@@ -62,9 +62,9 @@ async function createDatabase() {
   try {
     await client.query(`CREATE DATABASE ${dbName}`);
     console.log(`Database '${dbName}' created.`);
-  } catch (error){
+  } catch (error) {
     console.error(`Couldn't create database ${dbName}`);
-  }finally {
+  } finally {
     client.release();
   }
 }
@@ -94,7 +94,6 @@ async function createTables() {
     );
   `);
   console.log(`Table 'user_roles' created in '${dbName}' database.`);
-
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -127,7 +126,6 @@ async function createTables() {
   await pool.query(
     `CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");`
   );
-
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS site_types (
@@ -171,29 +169,58 @@ async function createTables() {
       CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
     );
   `);
-  await pool.query(`CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");`);
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");`
+  );
 }
 
-async function loadDemoData(){  
-  const user = {
-    emailAddress: "mail@mail.com",
-    username: "jdoe",
-    firstName: "John",
-    lastName: "Doe",
-    phone: "8013658521",
-    affiliation: "Air Force",
-    status: "Active Duty",
-    roleId: 1,
-    salt: "randomSalt",
-    password: "1234",
-  };
-  
+async function loadDemoData() {
+  const users = [
+    {
+      emailAddress: "mail@mail.com",
+      username: "jdoe",
+      firstName: "John",
+      lastName: "Doe",
+      phone: "8013658521",
+      affiliation: "Air Force",
+      status: "Active Duty",
+      roleId: 1,
+      salt: "dingle",
+      password: "12345",
+    },
+    {
+      // Feel free to change any of the following user details, I just copy pasted the above mostly
+      emailAddress: "mail2@mail.com",
+      username: "employee1",
+      firstName: "EMPLOYEE",
+      lastName: "DUMMY",
+      phone: "8013658521",
+      affiliation: "Air Force",
+      status: "Active Duty",
+      roleId: 2,
+      salt: "dingle",
+      password: "password",
+    },
+    {
+      emailAddress: "mail3@mail.com",
+      username: "admin",
+      firstName: "ADMIN",
+      lastName: "DUMMY",
+      phone: "1111111111",
+      affiliation: "Air Force",
+      status: "Active Duty",
+      roleId: 3,
+      salt: "dingle",
+      password: "admin",
+    },
+  ];
+
   const site_types = {
     siteType: "small RV parking",
     rate: 25.0,
     maxLength: 40,
   };
-  
+
   const sites = [
     {
       siteName: "1",
@@ -208,7 +235,7 @@ async function loadDemoData(){
       siteTypeId: 1,
     },
   ];
-  
+
   const reservations = [
     {
       userId: 1,
@@ -261,9 +288,17 @@ async function loadDemoData(){
     },
   ];
 
-  const roles = {
-    role: "customer",
-  };
+  const roles = [
+    {
+      role: "customer",
+    },
+    {
+      role: "employee",
+    },
+    {
+      role: "admin",
+    },
+  ];
 
   try {
     await pool.query(`
@@ -280,19 +315,22 @@ async function loadDemoData(){
       console.log(`Dummy site '${site.siteName}' inserted`);
     }
 
-    await pool.query(`
+    for (const r of roles) {
+      await pool.query(`
         INSERT INTO user_roles
-        VALUES (DEFAULT, '${roles.role}');
+        VALUES (DEFAULT, '${r.role}');
       `);
-    console.log(`Dummy role '${roles.role}' inserted`);
+      console.log(`Dummy role '${r.role}' inserted`);
+    }
 
-
-    const passwordHash = await bcrypt.hash(user.password + user.salt, 12);
-    await pool.query(`
+    for (const u of users) {
+      const passwordHash = await bcrypt.hash(u.password + u.salt, 12);
+      await pool.query(`
         INSERT INTO users (emailAddress, username, firstName, lastName, phone, affiliation, status, roleId, passwordHash, salt)
-        VALUES ('${user.emailAddress}', '${user.username}', '${user.firstName}', '${user.lastName}', '${user.phone}', '${user.affiliation}', '${user.status}', ${user.roleId}, '${passwordHash}', '${user.salt}' );
+        VALUES ('${u.emailAddress}', '${u.username}', '${u.firstName}', '${u.lastName}', '${u.phone}', '${u.affiliation}', '${u.status}', ${u.roleId}, '${passwordHash}', '${u.salt}' );
       `);
-    console.log(`Dummy user '${user.firstName}' inserted`);
+      console.log(`Dummy user '${u.firstName}' inserted`);
+    }
 
     for (const res of reservations) {
       //console.log(res);
@@ -374,11 +412,11 @@ async function findUserByUsername(username) {
   const normalized = username?.trim().toLowerCase();
   if (!normalized) return null;
   const result = await pool.query(
-      `SELECT userId, emailAddress, username, passwordhash, ur.role, salt
+    `SELECT userId, emailAddress, username, passwordhash, ur.role, salt
       FROM users u join
       user_roles ur on ur.roleid = u.roleid
       WHERE username = $1`,
-      [normalized]
+    [normalized]
   );
   return result.rows[0] || null;
 }
@@ -407,7 +445,12 @@ async function findUserByEmail(email) {
   return result.rows[0] || null;
 }
 
-async function createUser({ email, username, passwordHash, role = 'customer' }) {
+async function createUser({
+  email,
+  username,
+  passwordHash,
+  role = "customer",
+}) {
   const normalizedEmail = email.trim().toLowerCase();
   const normalizedUsername = username.trim().toLowerCase();
 
@@ -418,7 +461,7 @@ async function createUser({ email, username, passwordHash, role = 'customer' }) 
   //     passwordHash,
   //     roleid
   //    )
-  //    VALUES (${email}, ${username}, ${passwordHash}, (SELECT DISTINCT roleid from user_roles where role = ${role})) 
+  //    VALUES (${email}, ${username}, ${passwordHash}, (SELECT DISTINCT roleid from user_roles where role = ${role}))
   //    RETURNING id, emailAddress, username, roleid, created_at`,
   // );
 
@@ -437,5 +480,5 @@ module.exports = {
   createUser,
   updateUserPassword,
   getCurrentAvailableSites,
-  activeReservations  
+  activeReservations,
 };
