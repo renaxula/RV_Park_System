@@ -74,7 +74,7 @@ function establishSession(req, user) {
   return new Promise((resolve, reject) => {
     req.session.regenerate((err) => {
       if (err) return reject(err);
-      req.session.userId = user.id;
+      req.session.userId = user.userid;
       req.session.role = user.role;
       req.session.username = user.username;
       req.session.save((saveErr) => {
@@ -158,6 +158,7 @@ app.post('/auth/login', async (req, res) => {
 });
 
 app.get('/auth/me', (req, res) => {
+  console.log(req.session);
   if (!req.session.userId) {
     return res.status(200).json({ user: null });
   }
