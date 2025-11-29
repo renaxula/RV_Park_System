@@ -1,0 +1,25 @@
+const [rows, setRows] = useState([]);
+  useEffect(() => {
+    async function loadAvailability() {
+      const response = await fetch("http://localhost:3000/api/availableSites");
+
+      const data = await response.json();
+      setRows(data);
+    }
+    loadAvailability();
+  }, []);
+
+most of what I did was set up reusable calls for the two reports
+
+to search for available sites fetch the following:
+"http://localhost:3000/api/availableSites?startDate=YYYY-MM-DD&endDate=yyyy-mm-dd"
+example: .../availableSites?startDate=2025-11-14&...
+end date can be left out so as to get time till next reservation
+start date can be left out so as to get todays availability
+ie: "http://localhost:3000/api/availableSites"
+
+example use from CurrentlyAvailable.jsx up top
+
+similar format is done for occupied sites, just fetch the following instead:
+"http://localhost:3000/api/occupied?date=YYYY-MM-DD"
+once again ?date can be left out to grab todays report.
