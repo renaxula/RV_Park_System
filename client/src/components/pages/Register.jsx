@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Card } from "../ui/Card";
 import { useAuth } from "../router/AuthContext";
+import styled from "styled-components";
+import { StyledButton } from "../ui/StyledButton";
 
 export function Register() {
   const navigate = useNavigate();
@@ -12,7 +14,7 @@ export function Register() {
   const [submitting, setSubmitting] = useState(false);
 
   if (isAuthenticated) {
-    return <Card><p>You are already signed in.</p></Card>;
+    return <RegisterCard><p>You are already signed in.</p></RegisterCard>;
   }
 
   const handleSubmit = async (e) => {
@@ -39,43 +41,102 @@ export function Register() {
   };
 
   return (
-    <Card>
-      <h2>Register</h2>
-      <form onSubmit={handleSubmit}>
-        <label>
+    <RegisterCard>
+      <Title>Register</Title>
+      <Form onSubmit={handleSubmit}>
+        <Label>
           Email
-          <input type="email" value={form.email} onChange={handleChange("email")} required />
-        </label>
-        <label>
+          <Input type="email" value={form.email} onChange={handleChange("email")} required />
+        </Label>
+        <Label>
           Username
-          <input type="text" value={form.username} onChange={handleChange("username")} required />
-        </label>
-        <label>
+          <Input type="text" value={form.username} onChange={handleChange("username")} required />
+        </Label>
+        <Label>
           Password (min 8 chars)
-          <input
+          <Input
             type="password"
             value={form.password}
             onChange={handleChange("password")}
             minLength={8}
             required
           />
-        </label>
-        <label>
+        </Label>
+        <Label>
           Confirm Password
-          <input
+          <Input
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             minLength={8}
             required
           />
-        </label>
+        </Label>
         {error && <p style={{ color: "red" }}>{error}</p>}
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Creating account..." : "Register"}
-        </button>
-      </form>
-      <p>Already have an account? <Link to="/login">Login</Link></p>
-    </Card>
+        <LoginButtonContainer>
+          <StyledButton type="submit" disabled={submitting}>
+            {submitting ? "Creating account..." : "Register"}
+          </StyledButton>
+        </LoginButtonContainer>
+      <p>Already have an account? <StyledLink to="/login">Login</StyledLink></p>
+      </Form>
+    </RegisterCard>
   );
 }
+
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
+
+const Title = styled.h2`
+  margin: 0 0 4px 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #0f172a;
+`;
+
+
+const Label = styled.label`
+  font-size: 0.875rem;
+  color: #475569;
+  font-weight: 600;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.95rem;
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+  box-shadow: 0 1px 0 rgba(2,6,23,0.02);
+
+  &:focus {
+    outline: none;
+    border-color: rgba(59,130,246,0.9);
+    box-shadow: 0 6px 18px rgba(59,130,246,0.08);
+  }
+`;
+
+
+const RegisterCard = styled(Card)`
+  width: 40%;
+  p {
+    text-align: center;
+  }
+`;
+
+const StyledLink = styled(Link)`
+  color: #4077d1ff;
+`;
+
+const LoginButtonContainer = styled.div`
+  margin: auto;
+  width: 100%;
+  text-align: center;
+`;

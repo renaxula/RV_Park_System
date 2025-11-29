@@ -10,12 +10,30 @@ export function MapAndRules() {
         <Rules>
           <RuleSection>
             <h2>Info</h2>
-            <p><b>Address:</b> 5622 Park Ln Bldg. #564 Hill AFB, UT 84056</p>
-            <p><b>Phone:</b> (801) 775-3250</p>
-            <p><b>Office Hours:</b> Monday - Friday, 0800 - 1600</p>
-            <p><b>Postal Service Mailing Address:</b> Your Name FamCamp 7338 Loncki St. Hill AFB, UT 84056 <i>Postal service mail needs to be picked up at the Base Post Office Bldg 344</i></p>
-            <p><b>UPS & Fed Ex:</b> Your Name FamCamp Bldg 564 Site # 5622 Park Lande Hill AFB, UT 84056</p>
-            <p><b>Website:</b> www.75fss.com</p>
+            <p>
+              <b>Address:</b> 5622 Park Ln Bldg. #564 Hill AFB, UT 84056
+            </p>
+            <p>
+              <b>Phone:</b> (801) 775-3250
+            </p>
+            <p>
+              <b>Office Hours:</b> Monday - Friday, 0800 - 1600
+            </p>
+            <p>
+              <b>Postal Service Mailing Address:</b> Your Name FamCamp 7338
+              Loncki St. Hill AFB, UT 84056{" "}
+              <i>
+                Postal service mail needs to be picked up at the Base Post
+                Office Bldg 344
+              </i>
+            </p>
+            <p>
+              <b>UPS & Fed Ex:</b> Your Name FamCamp Bldg 564 Site # 5622 Park
+              Lande Hill AFB, UT 84056
+            </p>
+            <p>
+              <b>Website:</b> www.75fss.com
+            </p>
             <br />
             <h2>General</h2>
             <p>
@@ -134,7 +152,7 @@ export function MapAndRules() {
                 Chows, Doberman Pinschers, wolf hybrids
               </li>
             </ul>
-
+            <br />
             <h2>Parking</h2>
             <p>
               Vehicles are only allowed to park in assigned spaces. Parking on
