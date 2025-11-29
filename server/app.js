@@ -114,7 +114,7 @@ app.post('/auth/register', async (req, res) => {
     res.status(201).json({
       message: 'Registered and logged in',
       user: {
-        id: newUser.id,
+        userId: newUser.userId,
         email: newUser.email,
         username: newUser.username,
         role: newUser.role,
@@ -144,7 +144,7 @@ app.post('/auth/login', async (req, res) => {
     res.json({
       message: 'Logged in',
       user: {
-        id: user.id,
+        userId: user.userId,
         email: user.email,
         username: user.username,
         role: user.role,
@@ -163,7 +163,7 @@ app.get('/auth/me', (req, res) => {
   }
   res.json({
     user: {
-      id: req.session.userId,
+      userId: req.session.userId,
       username: req.session.username,
       role: req.session.role,
     },
@@ -194,11 +194,11 @@ app.post('/auth/password', requireAuth, async (req, res) => {
     const user = await findUserById(req.session.userId);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-    const validPassword = await bcrypt.compare(currentPassword, user.passwordHash);
+    const validPassword = await bcrypt.compare(currentPassword+user.salt, user.passwordhash);
     if (!validPassword) return res.status(401).json({ error: 'Invalid current password' });
 
-    const passwordHash = await bcrypt.hash(newPassword, 12);
-    await updateUserPassword(user.id, passwordHash);
+    const passwordHash = await bcrypt.hash(newPassword+user.salt, 12);
+    await updateUserPassword(user.userid, passwordHash);
 
     res.json({ message: 'Password updated' });
   } catch (err) {
@@ -229,11 +229,11 @@ app.post('/admin/reset-password', requireRole('admin'), async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await updateUserPassword(user.id, passwordHash);
+    await updateUserPassword(user.userId, passwordHash);
 
     res.json({
       message: 'Temporary password set',
-      user: { id: user.id, username: user.username, role: user.role },
+      user: { userId: user.userId, username: user.username, role: user.role },
     });
   } catch (err) {
     console.error('Error resetting password:', err);
