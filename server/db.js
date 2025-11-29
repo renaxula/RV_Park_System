@@ -223,11 +223,33 @@ async function loadDemoData() {
     },
   ];
 
-  const site_types = {
-    siteType: "small RV parking",
-    rate: 25.0,
-    maxLength: 40,
-  };
+  const site_types = [
+    {
+      siteType: "small RV parking",
+      rate: 25.0,
+      maxLength: 40,
+    },
+    {
+      siteType: "medium RV parking",
+      rate: 25.0,
+      maxLength: 43,
+    },
+    {
+      siteType: "large RV parking",
+      rate: 25.0,
+      maxLength: 65,
+    },
+    {
+      siteType: "tent",
+      rate: 17.0,
+      maxLength: 0,
+    },
+    {
+      siteType: "dry storage",
+      rate: 5.0,
+      maxLength: 0,
+    },
+  ];
 
   const sites = [
     {
@@ -309,11 +331,13 @@ async function loadDemoData() {
   ];
 
   try {
-    await pool.query(`
+    for (const t of site_types) {
+      await pool.query(`
         INSERT INTO site_types
-        VALUES ( DEFAULT, '${site_types.siteType}', ${site_types.rate}, ${site_types.maxLength});
+        VALUES ( DEFAULT, '${t.siteType}', ${t.rate}, ${t.maxLength});
       `);
-    console.log("Dummy site type 'small RV parking' inserted");
+      console.log(`Dummy site type '${t.siteType}' inserted`);
+    }
 
     for (const site of sites) {
       await pool.query(`
