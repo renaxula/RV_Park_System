@@ -231,6 +231,11 @@ async function loadDemoData() {
       maxLength: 65,
     },
     {
+      siteType: "RV rental",
+      rate: 30.0,
+      maxLength: 0,
+    },
+    {
       siteType: "tent",
       rate: 17.0,
       maxLength: 0,
