@@ -3,6 +3,7 @@ const cors = require('cors');
 const session = require('express-session');
 const PgSession = require('connect-pg-simple')(session);
 const bcrypt = require('bcrypt');
+
 const {
   pool,
   postCountData,
@@ -107,6 +108,7 @@ app.post('/auth/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
     const newUser = await createUser({ email, username, passwordHash });
 
+    
     await establishSession(req, newUser);
 
     res.status(201).json({
@@ -134,7 +136,7 @@ app.post('/auth/login', async (req, res) => {
     const user = await findUserByUsername(username);
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const validPassword = await bcrypt.compare(password, user.password_hash);
+    const validPassword = await bcrypt.compare(password+user.salt, user.passwordhash);
     if (!validPassword) return res.status(401).json({ error: 'Invalid credentials' });
 
     await establishSession(req, user);
@@ -148,6 +150,7 @@ app.post('/auth/login', async (req, res) => {
         role: user.role,
       },
     });
+
   } catch (err) {
     console.error('Error logging in:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -191,7 +194,7 @@ app.post('/auth/password', requireAuth, async (req, res) => {
     const user = await findUserById(req.session.userId);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-    const validPassword = await bcrypt.compare(currentPassword, user.password_hash);
+    const validPassword = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!validPassword) return res.status(401).json({ error: 'Invalid current password' });
 
     const passwordHash = await bcrypt.hash(newPassword, 12);

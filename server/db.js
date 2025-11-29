@@ -1,6 +1,8 @@
 const pkg = require("pg");
-const { Pool, Client } = pkg;
+const { Pool } = pkg;
 require("dotenv").config();
+const bcrypt = require('bcrypt');
+
 
 const dbUser = process.env.POSTGRES_USER;
 const dbPassword = process.env.POSTGRES_PASS;
@@ -168,6 +170,16 @@ async function createTables() {
     );
   `);
   console.log(`Table 'reservations' created in '${dbName}' database.`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "session" (
+      "sid" varchar NOT NULL COLLATE "default",
+      "sess" json NOT NULL,
+      "expire" timestamp(6) NOT NULL,
+      CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");`);
 }
 
 async function loadDemoData(){  
@@ -283,9 +295,10 @@ async function loadDemoData(){
     console.log(`Dummy role '${roles.role}' inserted`);
 
 
+    const passwordHash = await bcrypt.hash(user.password + user.salt, 12);
     await pool.query(`
         INSERT INTO users (emailAddress, username, firstName, lastName, phone, affiliation, status, roleId, passwordHash, salt)
-        VALUES ('${user.emailAddress}', '${user.username}', '${user.firstName}', '${user.lastName}', '${user.phone}', '${user.affiliation}', '${user.status}', ${user.roleId}, md5('${user.password + user.salt}'), '${user.salt}' );
+        VALUES ('${user.emailAddress}', '${user.username}', '${user.firstName}', '${user.lastName}', '${user.phone}', '${user.affiliation}', '${user.status}', ${user.roleId}, '${passwordHash}', '${user.salt}' );
       `);
     console.log(`Dummy user '${user.firstName}' inserted`);
 
@@ -298,7 +311,6 @@ async function loadDemoData(){
       console.log(`Dummy reservation '${res.notes}' inserted`);
     }
 
-    await pool.end();
     console.log("Database initialization complete!");
   } catch (err) {
     console.error("Error initializing database:", err);
@@ -370,15 +382,21 @@ async function findUserByUsername(username) {
   const normalized = username?.trim().toLowerCase();
   if (!normalized) return null;
   const result = await pool.query(
-    'SELECT id, email, username, password_hash, role FROM users WHERE username = $1',
-    [normalized]
+      `SELECT userId, emailAddress, username, passwordhash, ur.role, salt
+      FROM users u join
+      user_roles ur on ur.roleid = u.roleid
+      WHERE username = $1`,
+      [normalized]
   );
   return result.rows[0] || null;
 }
 
 async function findUserById(id) {
   const result = await pool.query(
-    'SELECT id, email, username, password_hash, role FROM users WHERE id = $1',
+    `SELECT id, emailAddress, username, passwordHash, ur.role 
+    FROM users u JOIN
+    user_roles ur ON ur.roleid = u.roleid
+    WHERE id = $1`,
     [id]
   );
   return result.rows[0] || null;
@@ -388,7 +406,10 @@ async function findUserByEmail(email) {
   const normalized = email?.trim().toLowerCase();
   if (!normalized) return null;
   const result = await pool.query(
-    'SELECT id, email, username, password_hash, role FROM users WHERE email = $1',
+    `SELECT userId, emailAddress, username, passwordHash, ur.role 
+    FROM users u JOIN
+    user_roles ON ur.roleid = u.roleid
+    WHERE emailAddress = $1`,
     [normalized]
   );
   return result.rows[0] || null;
@@ -398,19 +419,26 @@ async function createUser({ email, username, passwordHash, role = 'customer' }) 
   const normalizedEmail = email.trim().toLowerCase();
   const normalizedUsername = username.trim().toLowerCase();
 
-  const result = await pool.query(
-    'INSERT INTO users (email, username, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, email, username, role, created_at',
-    [normalizedEmail, normalizedUsername, passwordHash, role]
-  );
+  // const result = await pool.query(
+  //   `INSERT INTO users (
+  //     emailAddress,
+  //     username,
+  //     passwordHash,
+  //     roleid
+  //    )
+  //    VALUES (${email}, ${username}, ${passwordHash}, (SELECT DISTINCT roleid from user_roles where role = ${role})) 
+  //    RETURNING id, emailAddress, username, roleid, created_at`,
+  // );
 
-  return result.rows[0];
+  // return result.rows[0];
 }
 
 async function updateUserPassword(userId, passwordHash) {
-  await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, userId]);
+  await pool.query('UPDATE users SET passwordHash = $1 WHERE id = $2', [passwordHash, userId]);
 }
 
 module.exports = {
+  pool,
   findUserByUsername,
   findUserByEmail,
   findUserById,
