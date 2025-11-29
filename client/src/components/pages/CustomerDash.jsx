@@ -1,12 +1,16 @@
 import { MakeReservation } from "./MakeReservation";
+import { MapAndRules } from "./MapAndRules";
 import { ViewReservations } from "./ViewReservations";
 import styled from "styled-components";
 
 export function CustomerDash(){
-    return <Layout>
-        <MakeReservation/>
-        <ViewReservations/>
-    </Layout>
+    return <>
+        <Layout>
+            <MakeReservation/>
+            <ViewReservations/>
+        </Layout>
+        <MapAndRules/>
+    </>
 }
 
 const Layout = styled.div`

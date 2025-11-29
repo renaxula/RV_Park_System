@@ -1,9 +1,9 @@
 import styled from "styled-components";
 
 export const StyledButton = styled.button`
-  background: ${(p) => (p.emphasize ? "#045de9 " : "#fff")};
-  color: ${(p) => (p.emphasize ? "white" : "#045de9")};
-  border: ${(p) => (p.emphasize ? "none" : "1px solid #045de9")};
+  background: ${(p) => (p.emphasize ? "#4077d1ff " : "#fff")};
+  color: ${(p) => (p.emphasize ? "white" : "#4077d1ff")};
+  border: ${(p) => (p.emphasize ? "none" : "1px solid #4077d1ff")};
   padding: 10px 16px;
   border-radius: 10px;
   font-weight: 600;

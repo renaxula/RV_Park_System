@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import { Card } from "../ui/Card";
+import { StyledButton } from "../ui/StyledButton";
 
 export function MakeReservation() {
   return (
@@ -40,7 +41,7 @@ export function MakeReservation() {
         </Grid>
 
         <Actions>
-          <SubmitButton type="submit">Submit Reservation</SubmitButton>
+          <StyledButton emphasize={true} type="submit">Submit Reservation</StyledButton>
         </Actions>
       </Form>
     </Card>
@@ -121,30 +122,4 @@ const TimeInput = styled.input`
 const Actions = styled.div`
   display: flex;
   justify-content: flex-end;
-`;
-
-const SubmitButton = styled.button`
-  background: #045de9;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 8px 20px rgba(3, 102, 214, 0.18);
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 26px rgba(3, 102, 214, 0.22);
-  }
-
-  &:active {
-    transform: translateY(0);
-    opacity: 0.97;
-  }
-
-  &:focus {
-    outline: 2px solid rgba(59,130,246,0.24);
-    outline-offset: 2px;
-  }
 `;
