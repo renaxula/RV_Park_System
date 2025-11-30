@@ -17,10 +17,15 @@ import { ViewReservations } from "../pages/ViewReservations";
 import styled from "styled-components";
 import bg from "../../assets/background.png";
 import { NavMenu } from "../ui/NavMenu";
+import { BrowserRouter } from "react-router-dom";
+import { AuthProvider } from "./AuthContext";
+import { PageContent } from "./PageContent";
+
 
 export default function AppRouter() {
+
   return (
-    <Page>
+    <AuthProvider>
       <BrowserRouter>
         <Content>
           <header>
@@ -52,35 +57,9 @@ export default function AppRouter() {
             </Routes>
           </Layout>
         </Content>
+        <PageContent/>
       </BrowserRouter>
-    </Page>
+    </AuthProvider>
   );
 }
 
-const Page = styled.div`
-  position: relative;
-  width: 100%;
-  min-height: 100vh;
-  margin: 0;
-  background-image: url(${bg});
-  background-size: cover;
-  background-position: right;
-  padding: 0; /* background touches edges */
-  color: #fff;
-  > * {
-    position: relative;
-    z-index: 1;
-  }
-`;
-
-const Content = styled.div`
-  padding: 24px;
-`;
-
-
-const Layout = styled.main`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 100vh;
-`;

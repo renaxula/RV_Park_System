@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { Card } from "../ui/Card";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import CurrentAvailability from "../reports/CurrentAvailability";
 
 export function AvailableSpots() {
   const navigate = useNavigate();

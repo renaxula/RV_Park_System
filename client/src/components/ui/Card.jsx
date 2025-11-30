@@ -5,7 +5,7 @@ export const Card = styled.div`
   color: #000;
   padding: 1.5rem;
   border-radius: 6px;
-  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.6));
   margin-top: 2rem;
   width: 100%;
 

@@ -1,33 +1,76 @@
+import { useState } from "react";
+import CurrentAvailability from "../reports/CurrentAvailability";
 import { Card } from "../ui/Card";
+import styled from "styled-components";
 
-export function OpenSitesReport() {
+export function OpenSitesReport(props) {
+  const [error, setError] = useState();
+
+  // const createFilterHandler = (event) => {
+  //   event.preventDefault();
+  //   const start = document.getElementById("start").value;
+  //   const end = document.getElementById("end").value;
+
+  //   if (new Date(end) < new Date(start)) {
+  //     setError("End must be after start");
+  //     return;
+  //   }
+  //   if (start != end) {
+  //     setStartDate(start);
+  //     setEndDate(end);
+  //   } else {
+  //     setStartDate(start);
+  //   }
+  //   setError("");
+
+  //   //console.log("start: " + startDate);
+  //   //console.log("end: " + endDate);
+  // };
+
   return (
     <Card>
       <h2>Open Sites Report</h2>
-      <p>
-        Shows which sites are available / reserved, nights available, hook-up,
-        and rate per night for each date.
+      {/*<p>
+        Shows which sites are available, nights available, and rate per night
+        for each date. By default gets today's availability, use date selectors
+        to get availability for different day/date range.
       </p>
-      <table>
+      <label htmlFor="start">Start: </label>
+      <input type="date" id="start" name="start" />
+      <label htmlFor="end"> End: </label>
+      <input type="date" id="end" name="end" />
+      <div>
+        <button onClick={createFilterHandler}>Search</button>
+        <p>{error}</p>
+      </div> */}
+      <Table>
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Site</th>
-            <th>Available Nights</th>
-            <th>Hook-up</th>
-            <th>Rate</th>
+            <Th>Site</Th>
+            <Th>Type</Th>
+            <Th>Rate</Th>
+            <Th>Days available</Th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>2025-11-05</td>
-            <td>Site 5</td>
-            <td>3</td>
-            <td>Full</td>
-            <td>$45</td>
-          </tr>
+          <CurrentAvailability date={props.date} />
         </tbody>
-      </table>
+      </Table>
     </Card>
   );
 }
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+`;
+
+const Th = styled.th`
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 2px solid #ddd;
+  background: #f8f9fa;
+  font-weight: 600;
+`;

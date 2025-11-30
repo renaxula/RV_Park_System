@@ -63,65 +63,41 @@ export function ViewReservations({ userId }) {
   );
 }
 
-/* Styled Components */
-
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-`;
-
-const Header = styled.h2`
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #0f172a;
-`;
-
-const SubHeader = styled.p`
-  margin: 0;
-  color: #475569;
-  font-size: 0.95rem;
-`;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  margin-top: 12px;
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  margin-top: 1rem;
+  font-size: 0.95rem;
 `;
 
 const Th = styled.th`
   text-align: left;
-  padding: 12px;
-  background: #f1f5f9;
+  padding: 12px 10px;
+  border-bottom: 2px solid #ddd;
+  background: #f8f9fa;
   font-weight: 600;
-  color: #334155;
 `;
 
 const Td = styled.td`
-  padding: 12px;
-  border-top: 1px solid #e2e8f0;
-  color: #0f172a;
+  padding: 10px 10px;
+  border-bottom: 1px solid #e6e6e6;
 `;
 
 const Tr = styled.tr`
   &:nth-child(even) {
-    background: #f9fafb;
+    background: #fafafa;
   }
 
   &:hover {
-    background: #e0f2fe;
+    background: #f0f4ff;
   }
 `;
 
 const EditLink = styled.a`
-  color: #045de9;
-  font-weight: 500;
+  color: #0077ff;
   text-decoration: none;
+  font-weight: 500;
 
   &:hover {
     text-decoration: underline;
