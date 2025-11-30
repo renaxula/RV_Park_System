@@ -17,7 +17,6 @@ function CurrentAvailability(props) {
     loadAvailability();
   }, []);
 
-  console.log(rows);
   return (
     <>
       <ul>

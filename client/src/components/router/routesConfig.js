@@ -14,6 +14,7 @@ import { OpenSitesReport } from "../pages/OpenSitesReport";
 import { Register } from "../pages/Register";
 import { ResetPassword } from "../pages/ResetPassword";
 import { ViewReservations } from "../pages/ViewReservations";
+import { EmployeeDash } from "../pages/EmployeeDash";
 
 export const routesConfig = [
   {
@@ -126,6 +127,12 @@ export const routesConfig = [
     label: "Home",
     requiredRole: "customer",
     Component: CustomerDash,
+    // showInNav: true,
+  },{
+    path: "/employee-dash",
+    label: "Home",
+    requiredRole: "employee",
+    Component: EmployeeDash,
     // showInNav: true,
   },
 ];

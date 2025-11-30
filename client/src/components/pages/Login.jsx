@@ -19,11 +19,11 @@ export function Login() {
   useEffect(() => {
     if(user !== null){
       if(user.role === 'customer'){
-        console.log('Navigating'); 
         navigate('/customer-dash');
+      }else if(user.role === 'employee'){
+        navigate('/employee-dash')
       }
     }
-
     return () => {
       setError(null);
     }
