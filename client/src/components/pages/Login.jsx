@@ -22,6 +22,10 @@ export function Login() {
         navigate('/customer-dash');
       }else if(user.role === 'employee'){
         navigate('/employee-dash')
+      }else if(user.role == 'admin'){
+        navigate('/admin-dash')
+      }else{
+        navigate('/customer-dash')
       }
     }
     return () => {

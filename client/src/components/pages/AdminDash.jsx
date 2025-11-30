@@ -3,7 +3,7 @@ import { MapAndRules } from "./MapAndRules";
 import styled from "styled-components";
 import { Reports } from "../cards/Reports";
 
-export function EmployeeDash(){
+export function AdminDash(){
     return <>
             <Reports/>
         <Layout>
