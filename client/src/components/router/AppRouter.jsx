@@ -7,6 +7,7 @@ import { ChangeRates } from "../pages/ChangeRates";
 import { ElevateDemote } from "../pages/ElevateDemote";
 import { EmployeeReservation } from "../pages/EmployeeReservation";
 import { MakeReservation } from "../pages/MakeReservation";
+import { EditReservation } from "../pages/EditReservation";
 import { MapAndRules } from "../pages/MapAndRules";
 import { OccupiedSitesReport } from "../pages/OccupiedSitesReport";
 import { OpenSitesReport } from "../pages/OpenSitesReport";
@@ -38,6 +39,7 @@ export default function AppRouter() {
                 element={<EmployeeReservation />}
               />
               <Route path="/make-reservation" element={<MakeReservation />} />
+              <Route path="/edit-reservation" element={<EditReservation />} />
               <Route path="/map-and-rules" element={<MapAndRules />} />
               <Route
                 path="/occupied-report"
