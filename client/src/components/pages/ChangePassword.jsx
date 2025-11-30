@@ -84,7 +84,7 @@ export function ChangePassword() {
         {message && <p style={{ color: "green" }}>{message}</p>}
         <LoginButtonContainer>
           <Link to={homePage}><StyledButton>{`\< Return`}</StyledButton></Link>
-          <StyledButton emphasize={true} type="submit" disabled={submitting}>
+          <StyledButton $emphasize={true} type="submit" disabled={submitting}>
             {submitting ? "Updating..." : "Change Password"}
           </StyledButton>
         </LoginButtonContainer>

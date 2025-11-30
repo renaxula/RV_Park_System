@@ -41,7 +41,7 @@ export function MakeReservation() {
         </Grid>
 
         <Actions>
-          <StyledButton emphasize={true} type="submit">Submit Reservation</StyledButton>
+          <StyledButton $emphasize={true} type="submit">Submit Reservation</StyledButton>
         </Actions>
       </Form>
     </Card>

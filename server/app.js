@@ -295,7 +295,6 @@ app.get("/api/availableSites", async (req, res) => {
 
   try {
     const results = await getCurrentAvailableSites(startDate, endDate);
-    console.log("Available Report Sent");
     res.json(results);
   } catch (err) {
     console.error(err);
@@ -313,7 +312,6 @@ app.get("/api/occupied", async (req, res) => {
 
   try {
     const results = await activeReservations(date);
-    console.log("Occupied Report Sent");
     res.json(results);
   } catch (err) {
     console.error(err);

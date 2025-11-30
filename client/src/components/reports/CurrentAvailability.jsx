@@ -1,19 +1,18 @@
 import { useEffect, useState } from "react";
+import styled from "styled-components";
 
-function CurrentAvailability({ startDate, endDate }) {
+function CurrentAvailability(props) {
   const [rows, setRows] = useState([]);
   const [dateFilter, setDateFilter] = useState("");
+  const date = props?.date;
 
   useEffect(() => {
-    if (startDate && startDate !== "") {
-      let filter = "?startDate=" + startDate;
-      if (endDate && endDate !== "") {
-        filter += "&endDate=" + endDate;
-      }
-      console.log(filter);
-      setDateFilter(filter);
+    let filter = "";
+    if (date && date !== "") {
+      filter += "?startDate=" + date + "&endDate=" + date;
     }
-  }, [startDate, endDate]);
+    setDateFilter(filter);
+  }, [date]);
 
   useEffect(() => {
     async function loadAvailability() {
@@ -31,19 +30,48 @@ function CurrentAvailability({ startDate, endDate }) {
     loadAvailability();
   }, [dateFilter]);
 
+  // If no rows, show "No Open Sites"
+  if (rows.length === 0) {
+    return (
+      <Tr>
+        <Td>No Open Sites</Td>
+      </Tr>
+    );
+  }
+
   return (
     <>
-      <ul>
-        {rows.length == 0 && <p>No Open Sites</p>}
-        {rows.map((row) => (
-          <li key={row.siteid}>
-            Site {row.sitename} — {row.sitetype} — ${row.rate}/night — Days
-            Available: {row.daysopen > 30 ? "Over a Month" : row.daysopen}
-          </li>
-        ))}
-      </ul>
+      {rows.map((row) => {
+        if (row.daysopen === 0) {
+          return null;
+        }
+
+        return (
+          <Tr key={row.siteid}>
+            <Td>{row.sitename}</Td>
+            <Td>{row.sitetype}</Td>
+            <Td>${row.rate}/night</Td>
+            <Td>{row.daysopen > 30 ? "Over a Month" : row.daysopen}</Td>
+          </Tr>
+        );
+      })}
     </>
   );
 }
 
 export default CurrentAvailability;
+
+const Td = styled.td`
+  padding: 10px 10px;
+  border-bottom: 1px solid #e6e6e6;
+`;
+
+const Tr = styled.tr`
+  &:nth-child(even) {
+    background: #fafafa;
+  }
+
+  &:hover {
+    background: #f0f4ff;
+  }
+`;
