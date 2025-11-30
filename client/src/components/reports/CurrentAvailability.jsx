@@ -1,11 +1,25 @@
 import { useEffect, useState } from "react";
 
-function CurrentAvailability(props) {
+function CurrentAvailability({ startDate, endDate }) {
   const [rows, setRows] = useState([]);
+  const [dateFilter, setDateFilter] = useState("");
+
+  useEffect(() => {
+    if (startDate && startDate !== "") {
+      let filter = "?startDate=" + startDate;
+      if (endDate && endDate !== "") {
+        filter += "&endDate=" + endDate;
+      }
+      console.log(filter);
+      setDateFilter(filter);
+    }
+  }, [startDate, endDate]);
 
   useEffect(() => {
     async function loadAvailability() {
-      const response = await fetch("http://localhost:3000/api/availableSites");
+      const response = await fetch(
+        `http://localhost:3000/api/availableSites${dateFilter}`
+      );
       //add '?startDate=YYYY-MM-DD' to get day other than today
       //example: .../availableSites?startDate=2025-11-14
       //also: &endDate=yyyy-mm-dd.
@@ -15,7 +29,7 @@ function CurrentAvailability(props) {
       setRows(data);
     }
     loadAvailability();
-  }, []);
+  }, [dateFilter]);
 
   return (
     <>

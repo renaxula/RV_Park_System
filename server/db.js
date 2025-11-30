@@ -231,6 +231,11 @@ async function loadDemoData() {
       maxLength: 65,
     },
     {
+      siteType: "RV rental",
+      rate: 30.0,
+      maxLength: 0,
+    },
+    {
       siteType: "tent",
       rate: 17.0,
       maxLength: 0,
@@ -241,7 +246,7 @@ async function loadDemoData() {
       maxLength: 0,
     },
   ];
-
+  //refrence: 1=small, 2=med, 3=large, 4=rental, 5=tent Only, 6=dry
   const sites = [
     {
       siteName: "1",
@@ -254,6 +259,34 @@ async function loadDemoData() {
     {
       siteName: "3",
       siteTypeId: 1,
+    },
+    {
+      siteName: "17",
+      siteTypeId: 2,
+    },
+    {
+      siteName: "18",
+      siteTypeId: 2,
+    },
+    {
+      siteName: "32",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "11B",
+      siteTypeId: 4,
+    },
+    {
+      siteName: "12B",
+      siteTypeId: 4,
+    },
+    {
+      siteName: "Tent Only",
+      siteTypeId: 5,
+    },
+    {
+      siteName: "dry-1",
+      siteTypeId: 6,
     },
   ];
 
@@ -479,8 +512,7 @@ async function createUser({
   password,
   role = "customer",
 }) {
-
-  console.log("First name: ", lastName)
+  console.log("First name: ", lastName);
   const normalizedEmail = email.trim().toLowerCase();
   const normalizedUsername = username.trim().toLowerCase();
   const normalizedFirstName = firstName.trim().toLowerCase();
@@ -517,8 +549,8 @@ async function createUser({
   );
   const resultWithRole = {
     ...result.rows[0],
-    "role": role
-  }
+    role: role,
+  };
   return resultWithRole;
 }
 
