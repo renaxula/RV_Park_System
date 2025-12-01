@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import styled from "styled-components";
 import useApiReports from "./useApiReports";
 
 const CurrentOccupied = (props) => {
@@ -10,7 +11,7 @@ const CurrentOccupied = (props) => {
     filter = `?date=${props.filter}`;
     console.log(filter);
   }
-
+  const date = props.date;
   useEffect(() => {
     async function loadAvailability() {
       fetchSites(
@@ -25,21 +26,18 @@ const CurrentOccupied = (props) => {
     console.log("api Loaded");
   }, [filter]);
 
-  console.log(rows);
   return (
     <>
       {rows.length == 0 ? (
-        <tr>
-          <td>No Occupied Sites </td>
-        </tr>
+        <Tr><Td>No Sites Occupied</Td></Tr>
       ) : (
         rows.map((row) => (
-          <tr key={row.siteid}>
-            <td>{row.lastname}</td>
-            <td>{row.siteid}</td>
-            <td>{row.daysleft}</td>
-            <td>{row.notes}</td>
-          </tr>
+          <Tr key={row.siteid}>
+            <Td>{row.lastname}</Td>
+            <Td>{row.siteid}</Td>
+            <Td>{row.daysleft}</Td>
+            <Td>{row.notes}</Td>
+          </Tr>
         ))
       )}
     </>
@@ -50,3 +48,20 @@ const CurrentOccupied = (props) => {
 
 
 export default CurrentOccupied;
+
+
+const Td = styled.td`
+  padding: 10px 10px;
+  border-bottom: 1px solid #e6e6e6;
+`;
+
+
+const Tr = styled.tr`
+  &:nth-child(even) {
+    background: #fafafa;
+  }
+
+  &:hover {
+    background: #f0f4ff;
+  }
+`;

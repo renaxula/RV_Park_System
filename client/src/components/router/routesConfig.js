@@ -1,5 +1,5 @@
 import App from "../../App";
-import { AdminDashboard } from "../pages/AdminDashboard";
+import { AdminDash } from "../pages/AdminDash";
 import { AvailableSpots } from "../pages/AvailableSpots";
 import { ChangePassword } from "../pages/ChangePassword";
 import { ChangeRates } from "../pages/ChangeRates";
@@ -14,6 +14,7 @@ import { OpenSitesReport } from "../pages/OpenSitesReport";
 import { Register } from "../pages/Register";
 import { ResetPassword } from "../pages/ResetPassword";
 import { ViewReservations } from "../pages/ViewReservations";
+import { EmployeeDash } from "../pages/EmployeeDash";
 
 export const routesConfig = [
   {
@@ -101,13 +102,6 @@ export const routesConfig = [
     showInNav: true,
   },
   {
-    path: "/admin",
-    label: "Admin Dashboard",
-    requiredRole: "admin",
-    Component: AdminDashboard,
-    showInNav: true,
-  },
-  {
     path: "/elevate-demote",
     label: "Elevate/Demote",
     requiredRole: "admin",
@@ -126,6 +120,19 @@ export const routesConfig = [
     label: "Home",
     requiredRole: "customer",
     Component: CustomerDash,
+    // showInNav: true,
+  },{
+    path: "/employee-dash",
+    label: "Home",
+    requiredRole: "employee",
+    Component: EmployeeDash,
+    // showInNav: true,
+  },
+  {
+    path: "/admin-dash",
+    label: "Home",
+    requiredRole: "admin",
+    Component: AdminDash,
     // showInNav: true,
   },
 ];

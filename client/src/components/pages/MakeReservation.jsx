@@ -1,54 +1,141 @@
 import styled from "styled-components";
+import axios from "axios";
 import { Card } from "../ui/Card";
+import { useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { StyledButton } from "../ui/StyledButton";
 
 export function MakeReservation() {
+  const location = useLocation();
+  const prefillSpot = location.state?.spot;
+
+  const [form, setForm] = useState({
+    rvSize: prefillSpot?.type || "",
+    siteSize: "",
+    startDate: "",
+    endDate: "",
+    spot: prefillSpot?.id || ""
+  });
+
+  const [availableSpots, setAvailableSpots] = useState([]);
+
+  function updateField(e) {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  }
+
+  // fetch availability when both dates selected
+  useEffect(() => {
+    if (!form.startDate || !form.endDate) return;
+
+    async function fetchSpots() {
+      try {
+        const res = await axios.get("http://localhost:3000/spots", {
+          params: {
+            start: form.startDate,
+            end: form.endDate
+          }
+        });
+        setAvailableSpots(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    fetchSpots();
+  }, [form.startDate, form.endDate]);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    const body = {
+      userId: 1,
+      siteId: form.spot,
+      startDate: form.startDate,
+      endDate: form.endDate,
+      notes: `RV: ${form.rvSize}, Site size: ${form.siteSize}`
+    };
+
+    try {
+      const res = await axios.post("http://localhost:3000/reservations", body);
+      alert("Reservation created!");
+    } catch (err) {
+      console.error(err);
+      alert("Error making reservation");
+    }
+  }
+
   return (
     <Card>
-      <Form noValidate>
+      <Form onSubmit={handleSubmit}>
         <Title>Make a Reservation</Title>
 
         <Grid>
+
           <Field>
-            <Label htmlFor="name">Name</Label>
-            <TextInput id="name" name="name" type="text" />
+            <Label>Name</Label>
+            <TextInput name="name" value={form.name} onChange={updateField} />
           </Field>
 
           <Field>
-            <Label htmlFor="rvSize">RV size (ft)</Label>
-            <NumberInput id="rvSize" name="rvSize" min="1" />
+            <Label>RV Size</Label>
+            <TextInput name="rvSize" value={form.rvSize} onChange={updateField} />
           </Field>
 
           <Field>
-            <Label htmlFor="siteSize">Site size (ft)</Label>
-            <NumberInput id="siteSize" name="siteSize" min="1" />
+            <Label>Site Size</Label>
+            <TextInput name="siteSize" value={form.siteSize} onChange={updateField} />
           </Field>
 
           <Field>
-            <Label htmlFor="startDate">Start date</Label>
-            <DateInput id="startDate" name="startDate" type="date" />
+            <Label>Start Date</Label>
+            <DateInput
+              name="startDate"
+              type="date"
+              value={form.startDate}
+              onChange={updateField}
+            />
           </Field>
 
           <Field>
-            <Label htmlFor="endDate">End date</Label>
-            <DateInput id="endDate" name="endDate" type="date" />
+            <Label>End Date</Label>
+            <DateInput
+              name="endDate"
+              type="date"
+              value={form.endDate}
+              onChange={updateField}
+            />
           </Field>
 
           <Field>
-            <Label htmlFor="time">Time</Label>
-            <TimeInput id="time" name="time" type="time" />
+            <Label>Available Spot</Label>
+            <SelectInput
+              name="spot"
+              value={form.spot}
+              onChange={updateField}
+              disabled={!!prefillSpot}
+            >
+              <option value="">
+                {prefillSpot ? prefillSpot.name : "-- Select a spot --"}
+              </option>
+
+              {availableSpots.map((s) => (
+                <option key={s.siteid} value={s.siteid}>
+                  {s.sitename} — {s.sitetype} — ${s.rate}/night
+                </option>
+              ))}
+            </SelectInput>
           </Field>
+
         </Grid>
 
         <Actions>
-          <StyledButton emphasize={true} type="submit">Submit Reservation</StyledButton>
+          <StyledButton $emphasize={true} type="submit">Submit Reservation</StyledButton>
         </Actions>
+
       </Form>
     </Card>
   );
 }
-
-/* Styled components */
 
 const Form = styled.form`
   display: flex;
@@ -101,6 +188,11 @@ const sharedInput = `
     border-color: rgba(59,130,246,0.9);
     box-shadow: 0 6px 18px rgba(59,130,246,0.08);
   }
+`;
+
+
+const SelectInput = styled.select`
+  ${sharedInput}
 `;
 
 const TextInput = styled.input`

@@ -1,37 +1,66 @@
-import { Card } from "../ui/Card";
+import { useEffect, useState } from "react";
 import styled from "styled-components";
+import { Card } from "../ui/Card";
+import { Link } from "react-router-dom";
+import axios from "axios";
+import { useAuth } from "../router/AuthContext";
 import { StyledButton } from "../ui/StyledButton";
 
 export function ViewReservations() {
+  const [reservations, setReservations] = useState([]);
+  const { user } = useAuth();
+  const userId = user.userId;
+
+  useEffect(() => {
+    async function fetchReservations() {
+      try {
+        const res = await axios.get(`http://localhost:3000/reservations/${userId}`);
+        console.log("response: ", res.data);
+        setReservations(res.data);
+      } catch (err) {
+        console.error("Error fetching reservations:", err);
+      }
+    }
+
+    fetchReservations();
+  }, [userId]);
+
+
   return (
     <Card>
-      <h3>View / Edit Reservations</h3>
-
-      <Table>
-        <thead>
-          <tr>
-            <Th>Reservation ID</Th>
-            <Th>Name</Th>
-            <Th>Site</Th>
-            <Th>Start</Th>
-            <Th>End</Th>
-            <Th>Actions</Th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <Tr>
-            <Td>123</Td>
-            <Td>Jane Doe</Td>
-            <Td>12</Td>
-            <Td>2025-11-01</Td>
-            <Td>2025-11-03</Td>
-            <Td>
-              <StyledButton href="#">Edit</StyledButton>
-            </Td>
-          </Tr>
-        </tbody>
-      </Table>
+      <Container>
+        <Header>View / Edit Reservations</Header>
+        <Table>
+          <thead>
+            <tr>
+              <Th>Site</Th>
+              <Th>Start</Th>
+              <Th>End</Th>
+              <Th>Actions</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {reservations.map((res) => (
+              <Tr key={res.reservationid}>
+                <Td>{res.sitename}</Td>
+                <Td>{res.startdate.split("T")[0]}</Td>
+                <Td>{res.enddate.split("T")[0]}</Td>
+                <Td>
+                  <StyledButton>
+                    <EditLink
+                      as={Link}
+                      to="/edit-reservation"
+                      state={{ reservation: res }}
+                    >
+                      Edit
+                    </EditLink>
+                  </StyledButton>
+                </Td>
+              </Tr>
+            ))}
+          </tbody>
+        </Table>
+      </Container>
     </Card>
   );
 }
@@ -77,3 +106,5 @@ const EditLink = styled.a`
   }
 `;
 
+const Container = styled.div`display: flex; flex-direction: column; gap: 16px;`;
+const Header = styled.h2`margin: 0; font-size: 1.5rem; font-weight: 600; color: #0f172a;`;

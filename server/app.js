@@ -14,6 +14,8 @@ const {
   updateUserPassword,
   getCurrentAvailableSites,
   activeReservations,
+  getReservationsByUser,
+  createReservation
 } = require("./db.js");
 
 const app = express();
@@ -251,8 +253,8 @@ app.post("/admin/reset-password", requireRole("admin"), async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 12);
-    await updateUserPassword(user.userId, passwordHash);
+    const passwordHash = await bcrypt.hash(newPassword + user.salt, 12);
+    await updateUserPassword(user.userid, passwordHash);
 
     res.json({
       message: "Temporary password set",
@@ -295,7 +297,6 @@ app.get("/api/availableSites", async (req, res) => {
 
   try {
     const results = await getCurrentAvailableSites(startDate, endDate);
-    console.log("Available Report Sent");
     res.json(results);
   } catch (err) {
     console.error(err);
@@ -313,11 +314,46 @@ app.get("/api/occupied", async (req, res) => {
 
   try {
     const results = await activeReservations(date);
-    console.log("Occupied Report Sent");
     res.json(results);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database Error" });
+  }
+});
+
+
+app.post('/reservations', async (req, res) => {
+  try {
+    const reservation = await createReservation(req.body);
+    res.status(201).json({
+      message: "Reservation created",
+      reservation
+    });
+  } catch (err) {
+    console.error("Error creating reservation:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+app.get("/reservations/:userId", async (req, res) => {
+  const userId = parseInt(req.params.userId);
+  try {
+    const reservations = await getReservationsByUser(userId);
+    res.json(reservations);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch reservations" });
+  }
+});
+
+app.get("/available-spots", async (req, res) => {
+  try {
+    const spots = await getAvailableSites();
+    res.json(spots);
+  } catch (err) {
+    console.error("Error fetching available spots:", err);
+    res.status(500).json({ error: "Failed to fetch available spots" });
   }
 });
 
