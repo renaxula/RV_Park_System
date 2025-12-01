@@ -251,8 +251,8 @@ app.post("/admin/reset-password", requireRole("admin"), async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 12);
-    await updateUserPassword(user.userId, passwordHash);
+    const passwordHash = await bcrypt.hash(newPassword + user.salt, 12);
+    await updateUserPassword(user.userid, passwordHash);
 
     res.json({
       message: "Temporary password set",
