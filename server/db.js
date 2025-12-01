@@ -593,10 +593,10 @@ async function getReservationsByUser(userId) {
   const query = `
     SELECT *
     FROM reservations
-    WHERE userId = $1;`
+    WHERE userid = ${userId};`
   ;
 
-  const result = await pool.query(query, [userId]);
+  const result = await pool.query(query);
   return result.rows;
 }
 

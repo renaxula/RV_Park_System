@@ -15,6 +15,7 @@ export function ViewReservations() {
     async function fetchReservations() {
       try {
         const res = await axios.get(`http://localhost:3000/reservations/${userId}`);
+        console.log("response: ", res.data);
         setReservations(res.data);
       } catch (err) {
         console.error("Error fetching reservations:", err);
@@ -23,6 +24,7 @@ export function ViewReservations() {
 
     fetchReservations();
   }, [userId]);
+
 
   return (
     <Card>
@@ -43,12 +45,12 @@ export function ViewReservations() {
           </thead>
           <tbody>
             {reservations.map((res) => (
-              <Tr key={res.reservationId}>
-                <Td>{res.reservationId}</Td>
-                <Td>{res.emailAddress}</Td>
-                <Td>{res.siteId}</Td>
-                <Td>{res.startDate}</Td>
-                <Td>{res.endDate}</Td>
+              <Tr key={res.reservationid}>
+                <Td>{res.reservationid}</Td>
+                <Td>{res.userid}</Td>
+                <Td>{res.siteid}</Td>
+                <Td>{res.startdate}</Td>
+                <Td>{res.enddate}</Td>
                 <Td>
                   <EditLink
                     as={Link}
