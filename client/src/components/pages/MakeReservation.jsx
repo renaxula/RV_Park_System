@@ -1,7 +1,9 @@
-import React from "react";
 import styled from "styled-components";
 import axios from "axios";
 import { Card } from "../ui/Card";
+import { useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { StyledButton } from "../ui/StyledButton";
 
 export function MakeReservation() {
   const location = useLocation();
@@ -134,14 +136,6 @@ export function MakeReservation() {
     </Card>
   );
 }
-
-
-// your styled components here...
-
-
-/* Styled components */
-
-
 
 const Form = styled.form`
   display: flex;

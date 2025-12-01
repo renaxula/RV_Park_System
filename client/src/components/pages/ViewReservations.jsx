@@ -103,3 +103,7 @@ const EditLink = styled.a`
     text-decoration: underline;
   }
 `;
+
+const Container = styled.div`display: flex; flex-direction: column; gap: 16px;`;
+const Header = styled.h2`margin: 0; font-size: 1.5rem; font-weight: 600; color: #0f172a;`;
+const SubHeader = styled.p`margin: 0; color: #475569; font-size: 0.95rem;`;

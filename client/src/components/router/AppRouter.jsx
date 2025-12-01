@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import App from "../../App";
-import { AdminDashboard } from "../pages/AdminDashboard";
+import { AdminDash } from "../pages/AdminDash";
 import { AvailableSpots } from "../pages/AvailableSpots";
 import { ChangePassword } from "../pages/ChangePassword";
 import { ChangeRates } from "../pages/ChangeRates";
@@ -14,10 +14,6 @@ import { OpenSitesReport } from "../pages/OpenSitesReport";
 import { Register } from "../pages/Register";
 import { ResetPassword } from "../pages/ResetPassword";
 import { ViewReservations } from "../pages/ViewReservations";
-import styled from "styled-components";
-import bg from "../../assets/background.png";
-import { NavMenu } from "../ui/NavMenu";
-import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./AuthContext";
 import { PageContent } from "./PageContent";
 
@@ -27,14 +23,9 @@ export default function AppRouter() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Content>
-          <header>
-            <NavMenu />
-          </header>
-          <Layout>
             <Routes>
               <Route path="/" element={<App />} />
-              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin" element={<AdminDash />} />
               <Route path="/available-spots" element={<AvailableSpots />} />
               <Route path="/change-rates" element={<ChangeRates />} />
               <Route path="/change-password" element={<ChangePassword />} />
@@ -55,11 +46,8 @@ export default function AppRouter() {
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/view-reservations" element={<ViewReservations />} />
             </Routes>
-          </Layout>
-        </Content>
         <PageContent/>
       </BrowserRouter>
     </AuthProvider>
   );
 }
-
