@@ -1,27 +1,37 @@
 import { useState, useEffect } from "react";
+import useApiReports from "./useApiReports";
 
 const CurrentOccupied = (props) => {
   const [rows, setRows] = useState([]);
+  const { isLoading, error, sendRequest: fetchSites } = useApiReports();
+
+  let filter = "";
+  if (props.filter && props.filter !== "") {
+    filter = `?date=${props.filter}`;
+    console.log(filter);
+  }
 
   useEffect(() => {
     async function loadAvailability() {
-      const response = await fetch(
-        "http://localhost:3000/api/occupied?date=2025-11-14"
+      fetchSites(
+        { url: `http://localhost:3000/api/occupied${filter}` },
+        setRows
       );
-      //add '?date=YYYY-MM-DD' to get day other than today
-      //example: ...occupied?date=2025-11-14
-      const data = await response.json();
-      setRows(data);
-      console.log(data);
+      // //add '?date=YYYY-MM-DD' to get day other than today
+      // //example: ...occupied?date=2025-11-14
     }
+
     loadAvailability();
-  }, []);
+    console.log("api Loaded");
+  }, [filter]);
 
   console.log(rows);
   return (
     <>
       {rows.length == 0 ? (
-        <tr>No Sites Occupied</tr>
+        <tr>
+          <td>No Occupied Sites </td>
+        </tr>
       ) : (
         rows.map((row) => (
           <tr key={row.siteid}>
@@ -35,5 +45,8 @@ const CurrentOccupied = (props) => {
     </>
   );
 };
+
+
+
 
 export default CurrentOccupied;

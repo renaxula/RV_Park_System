@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import useApiReports from "./useApiReports";
 
 function CurrentAvailability({ startDate, endDate }) {
   const [rows, setRows] = useState([]);
   const [dateFilter, setDateFilter] = useState("");
+  const { isLoading, error, sendRequest: fetchSites } = useApiReports();
 
   useEffect(() => {
     if (startDate && startDate !== "") {
@@ -17,16 +19,15 @@ function CurrentAvailability({ startDate, endDate }) {
 
   useEffect(() => {
     async function loadAvailability() {
-      const response = await fetch(
-        `http://localhost:3000/api/availableSites${dateFilter}`
+      fetchSites(
+        {
+          url: `http://localhost:3000/api/availableSites${dateFilter}`,
+        },
+        setRows
       );
-      //add '?startDate=YYYY-MM-DD' to get day other than today
-      //example: .../availableSites?startDate=2025-11-14
-      //also: &endDate=yyyy-mm-dd.
-      const data = await response.json();
-      //console.log("Data: ");
-      //console.log(data);
-      setRows(data);
+      // //add '?startDate=YYYY-MM-DD' to get day other than today
+      // //example: .../availableSites?startDate=2025-11-14
+      // //also: &endDate=yyyy-mm-dd.
     }
     loadAvailability();
   }, [dateFilter]);

@@ -448,6 +448,8 @@ async function activeReservations(date) {
      u.lastName,
      s.siteId,
      s.siteName,
+     r.startDate,
+     r.endDate,
      ( r.endDate - $1::date ) as DaysLeft,
      r.notes
   FROM sites s
