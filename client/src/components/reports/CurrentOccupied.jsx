@@ -29,32 +29,35 @@ const CurrentOccupied = (props) => {
   return (
     <>
       {rows.length == 0 ? (
-        <Tr><Td>No Sites Occupied</Td></Tr>
+        <Tr>
+          <Td>No Sites Occupied</Td>
+        </Tr>
       ) : (
-        rows.map((row) => (
-          <Tr key={row.siteid}>
-            <Td>{row.lastname}</Td>
-            <Td>{row.siteid}</Td>
-            <Td>{row.daysleft}</Td>
-            <Td>{row.notes}</Td>
-          </Tr>
-        ))
+        rows.map((row) => {
+          if (row.daysleft == 0) {
+            return null;
+          }
+
+          return (
+            <Tr key={row.siteid}>
+              <Td>{row.lastname}</Td>
+              <Td>{row.siteid}</Td>
+              <Td>{row.daysleft}</Td>
+              <Td>{row.notes}</Td>
+            </Tr>
+          );
+        })
       )}
     </>
   );
 };
 
-
-
-
 export default CurrentOccupied;
-
 
 const Td = styled.td`
   padding: 10px 10px;
   border-bottom: 1px solid #e6e6e6;
 `;
-
 
 const Tr = styled.tr`
   &:nth-child(even) {
