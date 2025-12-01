@@ -591,8 +591,10 @@ async function createReservation(reservation) {
 
 async function getReservationsByUser(userId) {
   const query = `
-    SELECT *
-    FROM reservations
+    SELECT r.*, st.sitetype, s.sitename
+    FROM reservations r
+    join sites s on r.siteid = s.siteid 
+    join site_types st on st.sitetypeid = s.sitetypeid 
     WHERE userid = ${userId};`
   ;
 

@@ -4,7 +4,7 @@ import { Card } from "../ui/Card";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../router/AuthContext";
-
+import { StyledButton } from "../ui/StyledButton";
 
 export function ViewReservations() {
   const [reservations, setReservations] = useState([]);
@@ -30,13 +30,9 @@ export function ViewReservations() {
     <Card>
       <Container>
         <Header>View / Edit Reservations</Header>
-        <SubHeader>List of current reservations with edit options.</SubHeader>
-
         <Table>
           <thead>
             <tr>
-              <Th>Reservation ID</Th>
-              <Th>Name</Th>
               <Th>Site</Th>
               <Th>Start</Th>
               <Th>End</Th>
@@ -46,19 +42,19 @@ export function ViewReservations() {
           <tbody>
             {reservations.map((res) => (
               <Tr key={res.reservationid}>
-                <Td>{res.reservationid}</Td>
-                <Td>{res.userid}</Td>
-                <Td>{res.siteid}</Td>
-                <Td>{res.startdate}</Td>
-                <Td>{res.enddate}</Td>
+                <Td>{res.sitename}</Td>
+                <Td>{res.startdate.split("T")[0]}</Td>
+                <Td>{res.enddate.split("T")[0]}</Td>
                 <Td>
-                  <EditLink
-                    as={Link}
-                    to="/edit-reservation"
-                    state={{ reservation: res }}
-                  >
-                    Edit
-                  </EditLink>
+                  <StyledButton>
+                    <EditLink
+                      as={Link}
+                      to="/edit-reservation"
+                      state={{ reservation: res }}
+                    >
+                      Edit
+                    </EditLink>
+                  </StyledButton>
                 </Td>
               </Tr>
             ))}
@@ -112,4 +108,3 @@ const EditLink = styled.a`
 
 const Container = styled.div`display: flex; flex-direction: column; gap: 16px;`;
 const Header = styled.h2`margin: 0; font-size: 1.5rem; font-weight: 600; color: #0f172a;`;
-const SubHeader = styled.p`margin: 0; color: #475569; font-size: 0.95rem;`;
