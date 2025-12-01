@@ -5,6 +5,8 @@ import styled from "styled-components";
 
 export function OpenSitesReport(props) {
   const [error, setError] = useState();
+  //const [startDate, setStartDate] = useState();
+  // const [endDate, setEndDate] = useState();
 
   // const createFilterHandler = (event) => {
   //   event.preventDefault();
@@ -16,8 +18,8 @@ export function OpenSitesReport(props) {
   //     return;
   //   }
   //   if (start != end) {
-  //     setStartDate(start);
-  //     setEndDate(end);
+  //     setStartDate(startDate);
+  //     setEndDate(endDate);
   //   } else {
   //     setStartDate(start);
   //   }
@@ -26,19 +28,20 @@ export function OpenSitesReport(props) {
   //   //console.log("start: " + startDate);
   //   //console.log("end: " + endDate);
   // };
+  const start = props.date;
 
   return (
     <Card>
       <h2>Open Sites Report</h2>
-      {/*<p>
+      {/* <p>
         Shows which sites are available, nights available, and rate per night
         for each date. By default gets today's availability, use date selectors
         to get availability for different day/date range.
-      </p>
-      <label htmlFor="start">Start: </label>
-      <input type="date" id="start" name="start" />
+      </p> */}
+      {/* <label htmlFor="start">Start: </label>
+      <input type="date" id="start"  />
       <label htmlFor="end"> End: </label>
-      <input type="date" id="end" name="end" />
+      <input type="date" id="end"  />
       <div>
         <button onClick={createFilterHandler}>Search</button>
         <p>{error}</p>
@@ -53,7 +56,7 @@ export function OpenSitesReport(props) {
           </tr>
         </thead>
         <tbody>
-          <CurrentAvailability date={props.date} />
+          <CurrentAvailability startDate={start} />
         </tbody>
       </Table>
     </Card>

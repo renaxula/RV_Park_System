@@ -3,21 +3,23 @@ import CurrentOccupied from "../reports/CurrentOccupied";
 import { Card } from "../ui/Card";
 import styled from "styled-components";
 
-export function OccupiedSitesReport() {
+export function OccupiedSitesReport(props) {
   const [dateSelect, setDateSelect] = useState("");
 
   const updateFilterHandler = (event) => {
     setDateSelect(document.getElementById("filter").value);
   };
 
+  const date = props.date ? props.date : "";
+
   return (
     <Card>
       <h2>Occupied Sites Report</h2>
       <Table>
-      <p>Shows date, last name, site, nights, and reservation notes.</p>
-      <label htmlFor="filter">Select Date: </label>
-      <input type="date" id="filter" onChange={updateFilterHandler} />
-      
+        {/* <p>Shows date, last name, site, nights, and reservation notes.</p>
+        <label htmlFor="filter">Select Date: </label>
+        <input type="date" id="filter" onChange={updateFilterHandler} /> */}
+
         <thead>
           <tr>
             <Th>Last Name</Th>
@@ -27,15 +29,12 @@ export function OccupiedSitesReport() {
           </tr>
         </thead>
         <tbody>
-          <CurrentOccupied filter={dateSelect} />
+          <CurrentOccupied filter={date} />
         </tbody>
       </Table>
     </Card>
   );
 }
-
-
-
 
 const Table = styled.table`
   width: 100%;

@@ -2,19 +2,22 @@ import { useEffect, useState } from "react";
 import styled from "styled-components";
 import useApiReports from "./useApiReports";
 
-function CurrentAvailability(props) {
+function CurrentAvailability({ startDate, endDate }) {
   const [rows, setRows] = useState([]);
   const [dateFilter, setDateFilter] = useState("");
   const { isLoading, error, sendRequest: fetchSites } = useApiReports();
-  const date = props?.date;
 
   useEffect(() => {
     let filter = "";
-    if (date && date !== "") {
-      filter += "?startDate=" + date + "&endDate=" + date;
+    console.log(startDate);
+    if (startDate && startDate != "") {
+      filter += "?startDate=" + startDate;
+    }
+    if (endDate && endDate !== "") {
+      filter += "&endDate=" + endDate;
     }
     setDateFilter(filter);
-  }, [date]);
+  }, [startDate, endDate]);
 
   useEffect(() => {
     async function loadAvailability() {
@@ -42,20 +45,14 @@ function CurrentAvailability(props) {
 
   return (
     <>
-      {rows.map((row) => {
-        if (row.daysopen === 0) {
-          return null;
-        }
-
-        return (
-          <Tr key={row.siteid}>
-            <Td>{row.sitename}</Td>
-            <Td>{row.sitetype}</Td>
-            <Td>${row.rate}/night</Td>
-            <Td>{row.daysopen > 30 ? "Over a Month" : row.daysopen}</Td>
-          </Tr>
-        );
-      })}
+      {rows.map((row) => (
+        <Tr key={row.siteid}>
+          <Td>{row.sitename}</Td>
+          <Td>{row.sitetype}</Td>
+          <Td>${row.rate}/night</Td>
+          <Td>{row.daysopen > 30 ? "Over a Month" : row.daysopen}</Td>
+        </Tr>
+      ))}
     </>
   );
 }
