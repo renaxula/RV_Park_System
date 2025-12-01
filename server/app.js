@@ -14,6 +14,8 @@ const {
   updateUserPassword,
   getCurrentAvailableSites,
   activeReservations,
+  getReservationsByUser,
+  createReservation
 } = require("./db.js");
 
 const app = express();

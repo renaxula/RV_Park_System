@@ -567,6 +567,39 @@ async function updateUserPassword(userId, passwordHash) {
   ]);
 }
 
+async function createReservation(reservation) {
+  const {
+    userId,
+    siteId,
+    reservationDate,
+    startTime,
+    endTime,
+  } = reservation;
+
+  const query = `
+    INSERT INTO reservations (userId, siteId, reservationDate, startTime, endTime)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING *;`
+  ;
+
+  const values = [userId, siteId, reservationDate, startTime, endTime];
+
+  const result = await pool.query(query, values);
+  return result.rows[0];
+}
+
+
+async function getReservationsByUser(userId) {
+  const query = `
+    SELECT *
+    FROM reservations
+    WHERE userId = $1;`
+  ;
+
+  const result = await pool.query(query, [userId]);
+  return result.rows;
+}
+
 module.exports = {
   pool,
   findUserByUsername,
@@ -576,4 +609,6 @@ module.exports = {
   updateUserPassword,
   getCurrentAvailableSites,
   activeReservations,
+  getReservationsByUser,
+  createReservation
 };

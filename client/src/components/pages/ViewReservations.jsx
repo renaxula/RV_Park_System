@@ -3,9 +3,13 @@ import styled from "styled-components";
 import { Card } from "../ui/Card";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../router/AuthContext";
 
-export function ViewReservations({ userId }) {
+
+export function ViewReservations() {
   const [reservations, setReservations] = useState([]);
+  const { user } = useAuth();
+  const userId = user.userId;
 
   useEffect(() => {
     async function fetchReservations() {
