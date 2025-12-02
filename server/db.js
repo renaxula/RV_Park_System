@@ -26,7 +26,8 @@ const adminPool = new Pool({
 });
 
 async function initiateDatabaseAndLoadData() {
-  await dropDatabase(dbName);
+  // Only drop/recreate if you need a fresh database
+  // await dropDatabase(dbName);
   await createDatabase();
   await createTables();
   await loadDemoData();
@@ -573,18 +574,18 @@ async function createReservation(reservation) {
   const {
     userId,
     siteId,
-    reservationDate,
-    startTime,
-    endTime,
+    startDate,
+    endDate,
+    notes,
   } = reservation;
 
   const query = `
-    INSERT INTO reservations (userId, siteId, reservationDate, startTime, endTime)
+    INSERT INTO reservations (userId, siteId, startDate, endDate, notes)
     VALUES ($1, $2, $3, $4, $5)
     RETURNING *;`
   ;
 
-  const values = [userId, siteId, reservationDate, startTime, endTime];
+  const values = [userId, siteId, startDate, endDate, notes || ''];
 
   const result = await pool.query(query, values);
   return result.rows[0];
