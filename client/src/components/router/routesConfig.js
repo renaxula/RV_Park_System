@@ -4,6 +4,7 @@ import { AvailableSpots } from "../pages/AvailableSpots";
 import { ChangePassword } from "../pages/ChangePassword";
 import { ChangeRates } from "../pages/ChangeRates";
 import { CustomerDash } from "../pages/CustomerDash";
+import { EditReservation } from "../pages/EditReservation";
 import { ElevateDemote } from "../pages/ElevateDemote";
 import { EmployeeReservation } from "../pages/EmployeeReservation";
 import { Login } from "../pages/Login";
@@ -44,6 +45,13 @@ export const routesConfig = [
     requiredRole: "customer",
     Component: ViewReservations,
     showInNav: true,
+  },
+  {
+    path: "/edit-reservation",
+    label: "Edit Reservation",
+    requiredRole: "customer",
+    Component: EditReservation,
+    showInNav: false,
   },
   {
     path: "/available-spots",

@@ -605,6 +605,49 @@ async function getReservationsByUser(userId) {
   return result.rows;
 }
 
+async function updateReservation(reservationId, updates) {
+  const { siteId, startDate, endDate, notes } = updates;
+  
+  const query = `
+    UPDATE reservations 
+    SET siteId = COALESCE($1, siteId),
+        startDate = COALESCE($2, startDate),
+        endDate = COALESCE($3, endDate),
+        notes = COALESCE($4, notes)
+    WHERE reservationId = $5
+    RETURNING *;
+  `;
+  
+  const values = [siteId, startDate, endDate, notes, reservationId];
+  const result = await pool.query(query, values);
+  return result.rows[0];
+}
+
+async function deleteReservation(reservationId) {
+  const query = `
+    DELETE FROM reservations 
+    WHERE reservationId = $1
+    RETURNING *;
+  `;
+  
+  const result = await pool.query(query, [reservationId]);
+  return result.rows[0];
+}
+
+async function getReservationById(reservationId) {
+  const query = `
+    SELECT r.*, st.sitetype, s.sitename, u.username
+    FROM reservations r
+    JOIN sites s ON r.siteid = s.siteid 
+    JOIN site_types st ON st.sitetypeid = s.sitetypeid
+    JOIN users u ON r.userid = u.userid
+    WHERE r.reservationId = $1;
+  `;
+  
+  const result = await pool.query(query, [reservationId]);
+  return result.rows[0];
+}
+
 module.exports = {
   pool,
   findUserByUsername,
@@ -615,5 +658,8 @@ module.exports = {
   getCurrentAvailableSites,
   activeReservations,
   getReservationsByUser,
-  createReservation
+  createReservation,
+  updateReservation,
+  deleteReservation,
+  getReservationById
 };

@@ -15,7 +15,10 @@ const {
   getCurrentAvailableSites,
   activeReservations,
   getReservationsByUser,
-  createReservation
+  createReservation,
+  updateReservation,
+  deleteReservation,
+  getReservationById
 } = require("./db.js");
 
 const app = express();
@@ -344,6 +347,66 @@ app.get("/reservations/:userId", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch reservations" });
+  }
+});
+
+// Update a reservation
+app.put("/reservations/:id", requireAuth, async (req, res) => {
+  const reservationId = parseInt(req.params.id);
+  const { siteId, startDate, endDate, notes } = req.body;
+
+  try {
+    // Optionally verify the user owns this reservation or is employee/admin
+    const existing = await getReservationById(reservationId);
+    if (!existing) {
+      return res.status(404).json({ error: "Reservation not found" });
+    }
+
+    // Allow if user owns it, or is employee/admin
+    const isOwner = existing.userid === req.session.userId;
+    const isStaff = req.session.role === 'employee' || req.session.role === 'admin';
+    
+    if (!isOwner && !isStaff) {
+      return res.status(403).json({ error: "Not authorized to edit this reservation" });
+    }
+
+    const updated = await updateReservation(reservationId, {
+      siteId: siteId ? parseInt(siteId) : null,
+      startDate,
+      endDate,
+      notes
+    });
+
+    res.json({ message: "Reservation updated", reservation: updated });
+  } catch (err) {
+    console.error("Error updating reservation:", err);
+    res.status(500).json({ error: "Failed to update reservation" });
+  }
+});
+
+// Cancel/delete a reservation
+app.delete("/reservations/:id", requireAuth, async (req, res) => {
+  const reservationId = parseInt(req.params.id);
+
+  try {
+    const existing = await getReservationById(reservationId);
+    if (!existing) {
+      return res.status(404).json({ error: "Reservation not found" });
+    }
+
+    // Allow if user owns it, or is employee/admin
+    const isOwner = existing.userid === req.session.userId;
+    const isStaff = req.session.role === 'employee' || req.session.role === 'admin';
+    
+    if (!isOwner && !isStaff) {
+      return res.status(403).json({ error: "Not authorized to cancel this reservation" });
+    }
+
+    const deleted = await deleteReservation(reservationId);
+    res.json({ message: "Reservation canceled", reservation: deleted });
+  } catch (err) {
+    console.error("Error deleting reservation:", err);
+    res.status(500).json({ error: "Failed to cancel reservation" });
   }
 });
 
