@@ -18,7 +18,8 @@ const {
   createReservation,
   updateReservation,
   deleteReservation,
-  getReservationById
+  getReservationById,
+  getAllReservations
 } = require("./db.js");
 
 const app = express();
@@ -335,6 +336,22 @@ app.post('/reservations', async (req, res) => {
   } catch (err) {
     console.error("Error creating reservation:", err);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get all reservations (employee/admin only)
+app.get("/reservations", requireAuth, async (req, res) => {
+  // Check if user is employee or admin
+  if (req.session.role !== 'employee' && req.session.role !== 'admin') {
+    return res.status(403).json({ error: "Forbidden - staff only" });
+  }
+
+  try {
+    const reservations = await getAllReservations();
+    res.json(reservations);
+  } catch (err) {
+    console.error("Error fetching all reservations:", err);
+    res.status(500).json({ error: "Failed to fetch reservations" });
   }
 });
 

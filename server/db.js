@@ -648,6 +648,20 @@ async function getReservationById(reservationId) {
   return result.rows[0];
 }
 
+async function getAllReservations() {
+  const query = `
+    SELECT r.*, st.sitetype, s.sitename, u.username, u.firstname, u.lastname
+    FROM reservations r
+    JOIN sites s ON r.siteid = s.siteid 
+    JOIN site_types st ON st.sitetypeid = s.sitetypeid
+    JOIN users u ON r.userid = u.userid
+    ORDER BY r.startdate DESC;
+  `;
+  
+  const result = await pool.query(query);
+  return result.rows;
+}
+
 module.exports = {
   pool,
   findUserByUsername,
@@ -661,5 +675,6 @@ module.exports = {
   createReservation,
   updateReservation,
   deleteReservation,
-  getReservationById
+  getReservationById,
+  getAllReservations
 };

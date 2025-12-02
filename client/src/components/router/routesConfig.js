@@ -1,5 +1,6 @@
 import App from "../../App";
 import { AdminDash } from "../pages/AdminDash";
+import { AllReservations } from "../pages/AllReservations";
 import { AvailableSpots } from "../pages/AvailableSpots";
 import { ChangePassword } from "../pages/ChangePassword";
 import { ChangeRates } from "../pages/ChangeRates";
@@ -100,6 +101,13 @@ export const routesConfig = [
     label: "Employee Reservation",
     requiredRole: "employee",
     Component: EmployeeReservation,
+    showInNav: false,
+  },
+  {
+    path: "/all-reservations",
+    label: "All Reservations",
+    requiredRole: "employee",
+    Component: AllReservations,
     showInNav: true,
   },
   {
