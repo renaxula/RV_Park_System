@@ -4,10 +4,12 @@ import { Card } from "../ui/Card";
 import { useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { StyledButton } from "../ui/StyledButton";
+import { useAuth } from "../router/AuthContext";
 
 export function MakeReservation() {
   const location = useLocation();
   const prefillSpot = location.state?.spot;
+  const { user } = useAuth();
 
   const [form, setForm] = useState({
     rvSize: prefillSpot?.type || "",
@@ -29,10 +31,10 @@ export function MakeReservation() {
 
     async function fetchSpots() {
       try {
-        const res = await axios.get("http://localhost:3000/spots", {
+        const res = await axios.get("http://localhost:3000/api/availableSites", {
           params: {
-            start: form.startDate,
-            end: form.endDate
+            startDate: form.startDate,
+            endDate: form.endDate
           }
         });
         setAvailableSpots(res.data);
@@ -47,9 +49,24 @@ export function MakeReservation() {
   async function handleSubmit(e) {
     e.preventDefault();
 
+    if (!user?.userId) {
+      alert("You must be logged in to make a reservation");
+      return;
+    }
+
+    if (!form.spot) {
+      alert("Please select an available spot");
+      return;
+    }
+
+    if (!form.startDate || !form.endDate) {
+      alert("Please select start and end dates");
+      return;
+    }
+
     const body = {
-      userId: 1,
-      siteId: form.spot,
+      userId: parseInt(user.userId),
+      siteId: parseInt(form.spot),
       startDate: form.startDate,
       endDate: form.endDate,
       notes: `RV: ${form.rvSize}, Site size: ${form.siteSize}`
@@ -58,6 +75,15 @@ export function MakeReservation() {
     try {
       const res = await axios.post("http://localhost:3000/reservations", body);
       alert("Reservation created!");
+      // Reset form after successful submission
+      setForm({
+        rvSize: "",
+        siteSize: "",
+        startDate: "",
+        endDate: "",
+        spot: ""
+      });
+      setAvailableSpots([]);
     } catch (err) {
       console.error(err);
       alert("Error making reservation");
