@@ -3,20 +3,38 @@ import styled from "styled-components";
 import axios from "axios";
 import { Card } from "../ui/Card";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../router/AuthContext";
+
+// Helper to format date string for input[type="date"]
+function formatDateForInput(dateStr) {
+  if (!dateStr) return "";
+  return dateStr.split("T")[0];
+}
 
 export function EditReservation() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const reservation = location.state?.reservation || null;
 
   const [form, setForm] = useState({
-    name: reservation?.name || "",
-    rvSize: reservation?.rvSize || "",
-    siteId: reservation?.siteId || "",
-    startDate: reservation?.startDate || "",
-    endDate: reservation?.endDate || "",
+    siteName: reservation?.sitename || "",
+    siteType: reservation?.sitetype || "",
+    siteId: reservation?.siteid || "",
+    startDate: formatDateForInput(reservation?.startdate) || "",
+    endDate: formatDateForInput(reservation?.enddate) || "",
+    notes: reservation?.notes || "",
   });
+
+  if (!reservation) {
+    return (
+      <Card>
+        <Title>No reservation selected</Title>
+        <p>Please go back and select a reservation to edit.</p>
+      </Card>
+    );
+  }
 
   function updateField(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -27,21 +45,21 @@ export function EditReservation() {
 
     try {
       await axios.put(
-        `http://localhost:3000/reservations/${reservation.id}`,
+        `http://localhost:3000/reservations/${reservation.reservationid}`,
         {
-          name: form.name,
           siteId: form.siteId,
           startDate: form.startDate,
           endDate: form.endDate,
-          rvSize: form.rvSize,
-        }
+          notes: form.notes,
+        },
+        { withCredentials: true }
       );
 
       alert("Reservation updated!");
-      navigate("/reservations");
+      navigate("/view-reservations");
     } catch (err) {
       console.error(err);
-      alert("Error updating reservation");
+      alert(err.response?.data?.error || "Error updating reservation");
     }
   }
 
@@ -49,12 +67,15 @@ export function EditReservation() {
     if (!window.confirm("Are you sure you want to cancel this reservation?")) return;
 
     try {
-      await axios.delete(`http://localhost:3000/reservations/${reservation.id}`);
+      await axios.delete(
+        `http://localhost:3000/reservations/${reservation.reservationid}`,
+        { withCredentials: true }
+      );
       alert("Reservation canceled.");
-      navigate("/reservations");
+      navigate("/view-reservations");
     } catch (err) {
       console.error(err);
-      alert("Error canceling reservation");
+      alert(err.response?.data?.error || "Error canceling reservation");
     }
   }
 
@@ -66,18 +87,13 @@ export function EditReservation() {
         <Grid>
 
           <Field>
-            <Label>Name</Label>
-            <TextInput disabled name="name" value={form.name} onChange={updateField} />
+            <Label>Site</Label>
+            <TextInput disabled name="siteName" value={form.siteName} />
           </Field>
 
           <Field>
-            <Label>RV Size</Label>
-            <TextInput disabled name="rvSize" value={form.rvSize} onChange={updateField} />
-          </Field>
-
-          <Field>
-            <Label>Site ID</Label>
-            <TextInput disabled name="siteId" value={form.siteId} onChange={updateField} />
+            <Label>Site Type</Label>
+            <TextInput disabled name="siteType" value={form.siteType} />
           </Field>
 
           <Field>
@@ -97,6 +113,16 @@ export function EditReservation() {
               type="date"
               value={form.endDate}
               onChange={updateField}
+            />
+          </Field>
+
+          <Field style={{ gridColumn: "1 / -1" }}>
+            <Label>Notes</Label>
+            <TextInput
+              name="notes"
+              value={form.notes}
+              onChange={updateField}
+              placeholder="Add any notes..."
             />
           </Field>
 
