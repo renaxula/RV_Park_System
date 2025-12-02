@@ -27,7 +27,7 @@ const adminPool = new Pool({
 
 async function initiateDatabaseAndLoadData() {
   // Only drop/recreate if you need a fresh database
-  // await dropDatabase(dbName);
+  await dropDatabase(dbName);
   await createDatabase();
   await createTables();
   await loadDemoData();

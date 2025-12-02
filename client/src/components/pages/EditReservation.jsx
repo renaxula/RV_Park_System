@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import axios from "axios";
 import { Card } from "../ui/Card";
@@ -27,6 +27,33 @@ export function EditReservation() {
     notes: reservation?.notes || "",
   });
 
+  const [availableSites, setAvailableSites] = useState([]);
+  const [loadingSites, setLoadingSites] = useState(false);
+
+  // Fetch available sites when dates change
+  useEffect(() => {
+    if (!form.startDate || !form.endDate) return;
+
+    async function fetchSites() {
+      setLoadingSites(true);
+      try {
+        const res = await axios.get("http://localhost:3000/api/availableSites", {
+          params: {
+            startDate: form.startDate,
+            endDate: form.endDate
+          }
+        });
+        setAvailableSites(res.data);
+      } catch (err) {
+        console.error("Error fetching available sites:", err);
+      } finally {
+        setLoadingSites(false);
+      }
+    }
+
+    fetchSites();
+  }, [form.startDate, form.endDate]);
+
   if (!reservation) {
     return (
       <Card>
@@ -38,6 +65,30 @@ export function EditReservation() {
 
   function updateField(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
+  }
+
+  function handleSiteChange(e) {
+    const selectedSiteId = e.target.value;
+    if (selectedSiteId === String(reservation.siteid)) {
+      // User selected the original site
+      setForm({
+        ...form,
+        siteId: reservation.siteid,
+        siteName: reservation.sitename,
+        siteType: reservation.sitetype
+      });
+    } else {
+      // User selected a different available site
+      const selectedSite = availableSites.find(s => String(s.siteid) === selectedSiteId);
+      if (selectedSite) {
+        setForm({
+          ...form,
+          siteId: selectedSite.siteid,
+          siteName: selectedSite.sitename,
+          siteType: selectedSite.sitetype
+        });
+      }
+    }
   }
 
   async function handleSubmit(e) {
@@ -88,7 +139,32 @@ export function EditReservation() {
 
           <Field>
             <Label>Site</Label>
-            <TextInput disabled name="siteName" value={form.siteName} />
+            <SelectInput
+              name="siteId"
+              value={form.siteId}
+              onChange={handleSiteChange}
+            >
+              {/* Always show the current reservation's site as an option */}
+              <option value={reservation.siteid}>
+                {reservation.sitename} — {reservation.sitetype} (current)
+              </option>
+              
+              {/* Show other available sites */}
+              {loadingSites ? (
+                <option disabled>Loading available sites...</option>
+              ) : (
+                availableSites
+                  .filter(s => s.siteid !== reservation.siteid)
+                  .map((s) => (
+                    <option key={s.siteid} value={s.siteid}>
+                      {s.sitename} — {s.sitetype} — ${s.rate}/night
+                    </option>
+                  ))
+              )}
+            </SelectInput>
+            <HelpText>
+              Change dates to see other available sites
+            </HelpText>
           </Field>
 
           <Field>
@@ -203,6 +279,12 @@ const sharedInput = `
 const SelectInput = styled.select`${sharedInput}`;
 const TextInput = styled.input`${sharedInput}`;
 const DateInput = styled.input`${sharedInput}`;
+
+const HelpText = styled.span`
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 4px;
+`;
 
 const Actions = styled.div`
   display: flex;
