@@ -5,15 +5,24 @@ import { useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { StyledButton } from "../ui/StyledButton";
 import { useAuth } from "../router/AuthContext";
+import { useNavigate } from "react-router-dom";
 
+
+/*
+  Filter down spots based on RV size
+  Filter so it shows the smallest avialable sites
+
+
+
+*/
 export function MakeReservation() {
   const location = useLocation();
   const prefillSpot = location.state?.spot;
-  const { user } = useAuth();
+  const { user, homepage } = useAuth();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     rvSize: prefillSpot?.type || "",
-    siteSize: "",
     startDate: "",
     endDate: "",
     spot: prefillSpot?.id || ""
@@ -69,7 +78,7 @@ export function MakeReservation() {
       siteId: parseInt(form.spot),
       startDate: form.startDate,
       endDate: form.endDate,
-      notes: `RV: ${form.rvSize}, Site size: ${form.siteSize}`
+      notes: `RV: ${form.rvSize}`
     };
 
     try {
@@ -78,16 +87,17 @@ export function MakeReservation() {
       // Reset form after successful submission
       setForm({
         rvSize: "",
-        siteSize: "",
         startDate: "",
         endDate: "",
         spot: ""
       });
       setAvailableSpots([]);
+      window.location.reload();
     } catch (err) {
       console.error(err);
       alert("Error making reservation");
     }
+
   }
 
   return (
@@ -105,11 +115,6 @@ export function MakeReservation() {
           <Field>
             <Label>RV Size</Label>
             <TextInput name="rvSize" value={form.rvSize} onChange={updateField} />
-          </Field>
-
-          <Field>
-            <Label>Site Size</Label>
-            <TextInput name="siteSize" value={form.siteSize} onChange={updateField} />
           </Field>
 
           <Field>
