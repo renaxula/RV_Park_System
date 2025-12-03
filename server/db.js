@@ -570,6 +570,33 @@ async function updateUserPassword(userId, passwordHash) {
   ]);
 }
 
+async function getAllUsers() {
+  const result = await pool.query(
+    `SELECT u.userId, u.emailAddress, u.username, u.firstName, u.lastName, ur.role, ur.roleId
+     FROM users u
+     JOIN user_roles ur ON ur.roleId = u.roleId
+     ORDER BY u.userId`
+  );
+  return result.rows;
+}
+
+async function updateUserRole(userId, roleId) {
+  const result = await pool.query(
+    `UPDATE users SET roleId = $1 WHERE userId = $2
+     RETURNING userId, username, emailAddress`,
+    [roleId, userId]
+  );
+  return result.rows[0];
+}
+
+async function getRoleByName(roleName) {
+  const result = await pool.query(
+    `SELECT roleId, role FROM user_roles WHERE role = $1`,
+    [roleName]
+  );
+  return result.rows[0];
+}
+
 async function createReservation(reservation) {
   const {
     userId,
@@ -669,6 +696,9 @@ module.exports = {
   findUserById,
   createUser,
   updateUserPassword,
+  getAllUsers,
+  updateUserRole,
+  getRoleByName,
   getCurrentAvailableSites,
   activeReservations,
   getReservationsByUser,

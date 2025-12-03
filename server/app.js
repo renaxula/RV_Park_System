@@ -12,6 +12,9 @@ const {
   findUserById,
   createUser,
   updateUserPassword,
+  getAllUsers,
+  updateUserRole,
+  getRoleByName,
   getCurrentAvailableSites,
   activeReservations,
   getReservationsByUser,
@@ -266,6 +269,52 @@ app.post("/admin/reset-password", requireRole("admin"), async (req, res) => {
     });
   } catch (err) {
     console.error("Error resetting password:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get all users (admin only)
+app.get("/admin/users", requireRole("admin"), async (req, res) => {
+  try {
+    const users = await getAllUsers();
+    res.json(users);
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Update user role (admin only)
+app.put("/admin/users/:userId/role", requireRole("admin"), async (req, res) => {
+  const { userId } = req.params;
+  const { role } = req.body || {};
+
+  if (!role || !["customer", "employee", "admin"].includes(role)) {
+    return res.status(400).json({ error: "Valid role is required (customer, employee, admin)" });
+  }
+
+  // Prevent admin from demoting themselves
+  if (parseInt(userId) === req.session.userId) {
+    return res.status(400).json({ error: "You cannot change your own role" });
+  }
+
+  try {
+    const roleRecord = await getRoleByName(role);
+    if (!roleRecord) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
+    const updatedUser = await updateUserRole(parseInt(userId), roleRecord.roleid);
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({
+      message: "Role updated successfully",
+      user: { ...updatedUser, role }
+    });
+  } catch (err) {
+    console.error("Error updating user role:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

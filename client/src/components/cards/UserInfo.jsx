@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 export function UserInfo() {
   const { user, logout, homePage } = useAuth();
   const isStaff = user?.role === 'employee' || user?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
   
   return (
     <UserCard>
@@ -27,6 +28,11 @@ export function UserInfo() {
             {isStaff && (
               <Link to="/all-reservations">
                 <StyledButton>All Reservations</StyledButton>
+              </Link>
+            )}
+            {isAdmin && (
+              <Link to="/elevate-demote">
+                <StyledButton>Manage Users</StyledButton>
               </Link>
             )}
           </Buttons>
