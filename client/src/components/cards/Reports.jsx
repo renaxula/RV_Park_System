@@ -27,9 +27,15 @@ export function Reports() {
   return (
     <>
       <DateCard>
-        <ArrowLeft onClick={decrementDate}/>
+        {/* 
         <h2>{date.toISOString().split("T")[0]}</h2>
-        <ArrowRight onClick={incrementDate}/>
+        */}
+        <ArrowLeft onClick={decrementDate}/>
+        <DateInput type="date" value={date.toISOString().split("T")[0]} onChange={(e) => {
+            const selectedDate = new Date(e.target.value);
+            setDate(selectedDate);
+        }}/>
+        <ArrowRight onClick={incrementDate}/> 
       </DateCard>
       <Layout>
         <OccupiedSitesReport date={date.toISOString().split("T")[0]}/>
@@ -109,4 +115,13 @@ const ArrowContainer = styled.div`
     outline: 2px solid rgba(59, 130, 246, 0.24);
     outline-offset: 2px;
   }
+`;
+
+const DateInput = styled.input`
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #fff;
+  color: #0f172a;
+  font-size: 2rem;
 `;

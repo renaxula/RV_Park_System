@@ -12,6 +12,8 @@ import { useNavigate } from "react-router-dom";
   Filter down spots based on RV size
   Filter so it shows the smallest avialable sites
   Change reservation needs to be so that you can't pick a spot that already exists.
+  Make it so there's a user dropdown for the employee make reservation
+  Autofill name based on the user for the customer make reservation
 */
 export function MakeReservation() {
   const location = useLocation();
