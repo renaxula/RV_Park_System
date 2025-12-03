@@ -46,15 +46,15 @@ export function ViewReservations() {
                 <Td>{res.startdate.split("T")[0]}</Td>
                 <Td>{res.enddate.split("T")[0]}</Td>
                 <Td>
-                  <StyledButton>
                     <EditLink
                       as={Link}
                       to="/edit-reservation"
                       state={{ reservation: res }}
                     >
+                  <StyledButton>
                       Edit
-                    </EditLink>
                   </StyledButton>
+                    </EditLink>
                 </Td>
               </Tr>
             ))}

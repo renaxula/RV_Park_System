@@ -11,9 +11,7 @@ import { useNavigate } from "react-router-dom";
 /*
   Filter down spots based on RV size
   Filter so it shows the smallest avialable sites
-
-
-
+  Change reservation needs to be so that you can't pick a spot that already exists.
 */
 export function MakeReservation() {
   const location = useLocation();

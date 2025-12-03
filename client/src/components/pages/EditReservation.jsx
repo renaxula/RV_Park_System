@@ -14,8 +14,8 @@ function formatDateForInput(dateStr) {
 export function EditReservation() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
-
+  const { user, homePage } = useAuth();
+ 
   const reservation = location.state?.reservation || null;
 
   const [form, setForm] = useState({
@@ -107,7 +107,8 @@ export function EditReservation() {
       );
 
       alert("Reservation updated!");
-      navigate("/view-reservations");
+      console.log("Navigating to homepage:", homePage);
+      navigate(homePage);
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.error || "Error updating reservation");
@@ -123,7 +124,7 @@ export function EditReservation() {
         { withCredentials: true }
       );
       alert("Reservation canceled.");
-      navigate("/view-reservations");
+      navigate(homePage);
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.error || "Error canceling reservation");
