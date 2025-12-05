@@ -6,8 +6,6 @@ const bcrypt = require("bcrypt");
 
 const {
   pool,
-  postCountData,
-  findUserByUsername,
   findUserByEmail,
   findUserById,
   createUser,
@@ -143,7 +141,7 @@ function establishSession(req, user) {
       if (err) return reject(err);
       req.session.userId = user.userid;
       req.session.role = user.role;
-      req.session.username = user.username;
+      req.session.email = user.emailaddress;
       req.session.save((saveErr) => {
         if (saveErr) return reject(saveErr);
         resolve();
@@ -157,8 +155,8 @@ app.get("/", (req, res) => {
 });
 
 app.post("/auth/register", async (req, res) => {
-  const { email, username, password, firstName, lastName, phone, affiliation, status } = req.body || {};
-  if (!email || !username || !password || !firstName || !lastName || !phone || !affiliation || !status) {
+  const { email, password, firstName, lastName, phone, affiliation, status } = req.body || {};
+  if (!email || !password || !firstName || !lastName || !phone || !affiliation || !status) {
     return res
       .status(400)
       .json({ error: "Required fields are missing" });
@@ -170,15 +168,11 @@ app.post("/auth/register", async (req, res) => {
   }
 
   try {
-    const existingUsername = await findUserByUsername(username);
-    if (existingUsername)
-      return res.status(409).json({ error: "Username already in use" });
-
     const existingEmail = await findUserByEmail(email);
     if (existingEmail)
       return res.status(409).json({ error: "Email already in use" });
 
-    const newUser = await createUser({ email, username, password, firstName, lastName, phone, affiliation, status });
+    const newUser = await createUser({ email, password, firstName, lastName, phone, affiliation, status });
 
     console.log("new User:", newUser);
     await establishSession(req, newUser);
@@ -186,9 +180,8 @@ app.post("/auth/register", async (req, res) => {
     res.status(201).json({
       message: "Registered and logged in",
       user: {
-        userId: newUser.userId,
-        email: newUser.email,
-        username: newUser.username,
+        userId: newUser.userid,
+        email: newUser.emailaddress,
         role: newUser.role,
       },
     });
@@ -199,15 +192,15 @@ app.post("/auth/register", async (req, res) => {
 });
 
 app.post("/auth/login", async (req, res) => {
-  const { username, password } = req.body || {};
-  if (!username || !password) {
+  const { email, password } = req.body || {};
+  if (!email || !password) {
     return res
       .status(400)
-      .json({ error: "Username and password are required" });
+      .json({ error: "Email and password are required" });
   }
 
   try {
-    const user = await findUserByUsername(username);
+    const user = await findUserByEmail(email);
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
     const validPassword = await bcrypt.compare(
@@ -222,9 +215,8 @@ app.post("/auth/login", async (req, res) => {
     res.json({
       message: "Logged in",
       user: {
-        userId: user.userId,
-        email: user.email,
-        username: user.username,
+        userId: user.userid,
+        email: user.emailaddress,
         role: user.role,
       },
     });
@@ -241,7 +233,7 @@ app.get("/auth/me", (req, res) => {
   res.json({
     user: {
       userId: req.session.userId,
-      username: req.session.username,
+      email: req.session.email,
       role: req.session.role,
     },
   });
@@ -292,13 +284,13 @@ app.post("/auth/password", requireAuth, async (req, res) => {
   }
 });
 
-// Admin-only endpoint to set a temporary password for any user by username or email.
+// Admin-only endpoint to set a temporary password for any user by email.
 app.post("/admin/reset-password", requireRole("admin"), async (req, res) => {
   const { account, newPassword } = req.body || {};
   if (!account || !newPassword) {
     return res
       .status(400)
-      .json({ error: "Account and new password are required" });
+      .json({ error: "Email and new password are required" });
   }
   if (newPassword.length < 8) {
     return res
@@ -307,10 +299,7 @@ app.post("/admin/reset-password", requireRole("admin"), async (req, res) => {
   }
 
   try {
-    const targetAccount = account.trim().toLowerCase();
-    const user = targetAccount.includes("@")
-      ? await findUserByEmail(targetAccount)
-      : await findUserByUsername(targetAccount);
+    const user = await findUserByEmail(account.trim().toLowerCase());
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -321,7 +310,7 @@ app.post("/admin/reset-password", requireRole("admin"), async (req, res) => {
 
     res.json({
       message: "Temporary password set",
-      user: { userId: user.userId, username: user.username, role: user.role },
+      user: { userId: user.userid, email: user.emailaddress, role: user.role },
     });
   } catch (err) {
     console.error("Error resetting password:", err);

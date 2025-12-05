@@ -14,7 +14,7 @@ export function UserInfo() {
       <Layout>
         <ProfileIcon />
         <Info>
-          <h2>{user?.username ?? ""}</h2>
+          <h2>{user?.email ?? ""}</h2>
           <Buttons>
             <Link to={homePage}>
               <HomeIcon />

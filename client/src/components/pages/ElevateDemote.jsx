@@ -47,7 +47,7 @@ export function ElevateDemote() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not update role");
 
-      setMessage(`Role updated for ${data.user.username} to ${newRole}`);
+      setMessage(`Role updated for ${data.user.emailaddress} to ${newRole}`);
       // Update local state
       setUsers(users.map(u => 
         u.userid === userId ? { ...u, role: newRole } : u
@@ -80,7 +80,6 @@ export function ElevateDemote() {
       <UsersTable>
         <thead>
           <tr>
-            <th>Username</th>
             <th>Email</th>
             <th>Name</th>
             <th>Current Role</th>
@@ -90,7 +89,6 @@ export function ElevateDemote() {
         <tbody>
           {users.map((user) => (
             <tr key={user.userid}>
-              <td>{user.username}</td>
               <td>{user.emailaddress}</td>
               <td>{user.firstname} {user.lastname}</td>
               <td>

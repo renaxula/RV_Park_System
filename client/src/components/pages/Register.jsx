@@ -11,7 +11,6 @@ export function Register() {
 
   const [form, setForm] = useState({
     email: "",
-    username: "",
     password: "",
     firstName: "",
     lastName: "",
@@ -53,20 +52,6 @@ export function Register() {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
-  /*
-      {
-      emailAddress: "mail@mail.com",
-      username: "jdoe",
-      firstName: "John",
-      lastName: "Doe",
-      phone: "8013658521",
-      affiliation: "Air Force",
-      status: "Active Duty",
-      roleId: 1,
-      salt: "dingle",
-      password: "12345",
-    },
-  */
 
   return (
     <RegisterCard>
@@ -105,15 +90,6 @@ export function Register() {
             type="tel"
             value={form.phone}
             onChange={handleChange("phone")}
-            required
-          />
-        </Label>
-        <Label>
-          Username
-          <Input
-            type="text"
-            value={form.username}
-            onChange={handleChange("username")}
             required
           />
         </Label>

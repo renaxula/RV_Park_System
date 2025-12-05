@@ -98,8 +98,7 @@ async function createTables() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       userId SERIAL PRIMARY KEY,
-      emailAddress VARCHAR(256) NOT NULL,
-      userName VARCHAR(256) NOT NULL,
+      emailAddress VARCHAR(256) NOT NULL UNIQUE,
       firstName VARCHAR(128) NOT NULL,
       lastName VARCHAR(128) NOT NULL,
       phone VARCHAR(256) NOT NULL,
@@ -166,7 +165,6 @@ async function loadDemoData() {
   const users = [
     {
       emailAddress: "mail@mail.com",
-      username: "jdoe",
       firstName: "John",
       lastName: "Doe",
       phone: "8013658521",
@@ -174,12 +172,10 @@ async function loadDemoData() {
       status: "Active Duty",
       roleId: 1,
       salt: "dingle",
-      password: "12345",
+      password: "12345678",
     },
     {
-      // Feel free to change any of the following user details, I just copy pasted the above mostly
-      emailAddress: "mail2@mail.com",
-      username: "employee1",
+      emailAddress: "employee@mail.com",
       firstName: "EMPLOYEE",
       lastName: "DUMMY",
       phone: "8013658521",
@@ -190,8 +186,7 @@ async function loadDemoData() {
       password: "password",
     },
     {
-      emailAddress: "mail3@mail.com",
-      username: "admin",
+      emailAddress: "admin@mail.com",
       firstName: "ADMIN",
       lastName: "DUMMY",
       phone: "1111111111",
@@ -199,7 +194,7 @@ async function loadDemoData() {
       status: "Active Duty",
       roleId: 3,
       salt: "dingle",
-      password: "admin",
+      password: "adminpass",
     },
   ];
 
@@ -682,8 +677,8 @@ async function loadDemoData() {
     for (const u of users) {
       const passwordHash = await bcrypt.hash(u.password + u.salt, 12);
       await pool.query(`
-        INSERT INTO users (emailAddress, username, firstName, lastName, phone, affiliation, status, roleId, passwordHash, salt)
-        VALUES ('${u.emailAddress}', '${u.username}', '${u.firstName}', '${u.lastName}', '${u.phone}', '${u.affiliation}', '${u.status}', ${u.roleId}, '${passwordHash}', '${u.salt}' );
+        INSERT INTO users (emailAddress, firstName, lastName, phone, affiliation, status, roleId, passwordHash, salt)
+        VALUES ('${u.emailAddress}', '${u.firstName}', '${u.lastName}', '${u.phone}', '${u.affiliation}', '${u.status}', ${u.roleId}, '${passwordHash}', '${u.salt}' );
       `);
       console.log(`Dummy user '${u.firstName}' inserted`);
     }
@@ -765,22 +760,9 @@ async function activeReservations(date) {
   return results.rows;
 }
 
-async function findUserByUsername(username) {
-  const normalized = username?.trim().toLowerCase();
-  if (!normalized) return null;
-  const result = await pool.query(
-    `SELECT userId, emailAddress, username, passwordhash, ur.role, salt
-      FROM users u join
-      user_roles ur on ur.roleid = u.roleid
-      WHERE username = $1`,
-    [normalized]
-  );
-  return result.rows[0] || null;
-}
-
 async function findUserById(id) {
   const result = await pool.query(
-    `SELECT userId, emailAddress, username, passwordHash, ur.role, salt
+    `SELECT userId, emailAddress, passwordHash, ur.role, salt
     FROM users u JOIN
     user_roles ur ON ur.roleid = u.roleid
     WHERE userId = $1`,
@@ -793,7 +775,7 @@ async function findUserByEmail(email) {
   const normalized = email?.trim().toLowerCase();
   if (!normalized) return null;
   const result = await pool.query(
-    `SELECT userId, emailAddress, username, passwordHash, ur.role, salt
+    `SELECT userId, emailAddress, passwordHash, ur.role, salt
     FROM users u JOIN
     user_roles ur ON ur.roleid = u.roleid
     WHERE emailAddress = $1`,
@@ -804,7 +786,6 @@ async function findUserByEmail(email) {
 
 async function createUser({
   email,
-  username,
   firstName,
   lastName,
   phone,
@@ -813,9 +794,7 @@ async function createUser({
   password,
   role = "customer",
 }) {
-  console.log("First name: ", lastName);
   const normalizedEmail = email.trim().toLowerCase();
-  const normalizedUsername = username.trim().toLowerCase();
   const normalizedFirstName = firstName.trim().toLowerCase();
   const normalizedLastName = lastName.trim().toLowerCase();
   const normalizedAffiliation = affiliation.trim().toLowerCase();
@@ -830,7 +809,6 @@ async function createUser({
     phone,
     affiliation,
     status,
-    username,
     passwordHash,
     roleid,
     salt
@@ -842,11 +820,10 @@ async function createUser({
     ${phone},
     '${normalizedAffiliation}',
     '${normalizedStatus}',
-    '${normalizedUsername}',
     '${await bcrypt.hash(password + salt, 12)}',
     (SELECT DISTINCT roleid from user_roles where role = '${role}'),
     '${salt}')
-   RETURNING userid, emailAddress, username`
+   RETURNING userid, emailAddress`
   );
   const resultWithRole = {
     ...result.rows[0],
@@ -864,7 +841,7 @@ async function updateUserPassword(userId, passwordHash) {
 
 async function getAllUsers() {
   const result = await pool.query(
-    `SELECT u.userId, u.emailAddress, u.username, u.firstName, u.lastName, ur.role, ur.roleId
+    `SELECT u.userId, u.emailAddress, u.firstName, u.lastName, ur.role, ur.roleId
      FROM users u
      JOIN user_roles ur ON ur.roleId = u.roleId
      ORDER BY u.userId`
@@ -875,7 +852,7 @@ async function getAllUsers() {
 async function updateUserRole(userId, roleId) {
   const result = await pool.query(
     `UPDATE users SET roleId = $1 WHERE userId = $2
-     RETURNING userId, username, emailAddress`,
+     RETURNING userId, emailAddress`,
     [roleId, userId]
   );
   return result.rows[0];
@@ -944,7 +921,7 @@ async function deleteReservation(reservationId) {
 
 async function getReservationById(reservationId) {
   const query = `
-    SELECT r.*, st.sitetype, s.sitename, u.username
+    SELECT r.*, st.sitetype, s.sitename, u.emailAddress as email
     FROM reservations r
     JOIN sites s ON r.siteid = s.siteid 
     JOIN site_types st ON st.sitetypeid = s.sitetypeid
@@ -958,7 +935,7 @@ async function getReservationById(reservationId) {
 
 async function getAllReservations() {
   const query = `
-    SELECT r.*, st.sitetype, s.sitename, u.username, u.firstname, u.lastname
+    SELECT r.*, st.sitetype, s.sitename, u.emailAddress as email, u.firstname, u.lastname
     FROM reservations r
     JOIN sites s ON r.siteid = s.siteid 
     JOIN site_types st ON st.sitetypeid = s.sitetypeid
@@ -972,7 +949,6 @@ async function getAllReservations() {
 
 module.exports = {
   pool,
-  findUserByUsername,
   findUserByEmail,
   findUserById,
   createUser,

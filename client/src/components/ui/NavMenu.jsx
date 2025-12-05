@@ -55,7 +55,7 @@ export function NavMenu() {
         <UserInfo>
           {isAuthenticated ? (
             <>
-              <span>Signed in as {user.username} ({user.role})</span>
+              <span>Signed in as {user.email} ({user.role})</span>
               <button type="button" onClick={handleLogout}>Logout</button>
             </>
           ) : (

@@ -31,7 +31,7 @@ export function ResetPassword() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not reset password");
-      setMessage(`Temporary password set for ${data.user.username}`);
+      setMessage(`Temporary password set for ${data.user.email}`);
       setAccount("");
       setNewPassword("");
       setConfirmPassword("");
@@ -45,10 +45,10 @@ export function ResetPassword() {
   return (
     <Card>
       <h2>Admin: Set a Temporary Password</h2>
-      <p>Enter a username or email to set a new temporary password for that account.</p>
+      <p>Enter the user's email to set a new temporary password for their account.</p>
       <form onSubmit={handleSubmit}>
         <label>
-          Account Email or Username:
+          Account Email:
           <input
             type="text"
             name="account"

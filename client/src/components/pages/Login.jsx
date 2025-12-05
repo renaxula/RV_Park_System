@@ -8,7 +8,7 @@ import { MapAndRules } from "../pages/MapAndRules"
 
 export function Login() {
   const { login, setError, error, isAuthenticated, user } = useAuth();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -44,7 +44,7 @@ export function Login() {
     setSubmitting(true);
     setError(null);
     try {
-      await login({ username, password });
+      await login({ email, password });
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Login failed");
@@ -60,11 +60,11 @@ export function Login() {
       <Form onSubmit={handleSubmit}>
         <Fields>
         <Label>
-          Username
+          Email
           <Input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
         </Label>

@@ -32,12 +32,12 @@ export function AllReservations() {
     fetchReservations();
   }, []);
 
-  // Filter reservations by username or site name
+  // Filter reservations by email or site name
   const filteredReservations = reservations.filter((res) => {
     if (!filter) return true;
     const searchTerm = filter.toLowerCase();
     return (
-      res.username?.toLowerCase().includes(searchTerm) ||
+      res.email?.toLowerCase().includes(searchTerm) ||
       res.firstname?.toLowerCase().includes(searchTerm) ||
       res.lastname?.toLowerCase().includes(searchTerm) ||
       res.sitename?.toLowerCase().includes(searchTerm)
@@ -60,7 +60,7 @@ export function AllReservations() {
         <SearchBox>
           <SearchInput
             type="text"
-            placeholder="Search by username, name, or site..."
+            placeholder="Search by email, name, or site..."
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
@@ -89,7 +89,7 @@ export function AllReservations() {
               filteredReservations.map((res) => (
                 <Tr key={res.reservationid}>
                   <Td>
-                    <strong>{res.username}</strong>
+                    <strong>{res.email}</strong>
                     <br />
                     <small>{res.firstname} {res.lastname}</small>
                   </Td>
