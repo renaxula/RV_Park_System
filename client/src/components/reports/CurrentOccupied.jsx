@@ -2,21 +2,29 @@ import { useState, useEffect } from "react";
 import styled from "styled-components";
 import useApiReports from "./useApiReports";
 
-const CurrentOccupied = (props) => {
+const CurrentOccupied = ({
+  filter: filterProp,
+  onDataLoad,
+  currentPage = 1,
+  itemsPerPage = 20,
+}) => {
   const [rows, setRows] = useState([]);
   const { isLoading, error, sendRequest: fetchSites } = useApiReports();
 
   let filter = "";
-  if (props.filter && props.filter !== "") {
-    filter = `?date=${props.filter}`;
+  if (filterProp && filterProp !== "") {
+    filter = `?date=${filterProp}`;
     console.log(filter);
   }
-  const date = props.date;
+
   useEffect(() => {
     async function loadAvailability() {
       fetchSites(
         { url: `http://localhost:3000/api/occupied${filter}` },
-        setRows
+        (data) => {
+          setRows(data);
+          if (onDataLoad) onDataLoad(data);
+        }
       );
       // //add '?date=YYYY-MM-DD' to get day other than today
       // //example: ...occupied?date=2025-11-14
@@ -26,27 +34,26 @@ const CurrentOccupied = (props) => {
     console.log("api Loaded");
   }, [filter]);
 
+  // Filter out rows with daysleft == 0 first, then paginate
+  const filteredRows = rows.filter((row) => row.daysleft != 0);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRows = filteredRows.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <>
-      {rows.length == 0 ? (
+      {filteredRows.length === 0 ? (
         <Tr>
           <Td>No Sites Occupied</Td>
         </Tr>
       ) : (
-        rows.map((row) => {
-          if (row.daysleft == 0) {
-            return null;
-          }
-
-          return (
-            <Tr key={row.siteid}>
-              <Td>{row.lastname}</Td>
-              <Td>{row.siteid}</Td>
-              <Td>{row.daysleft}</Td>
-              <Td>{row.notes}</Td>
-            </Tr>
-          );
-        })
+        paginatedRows.map((row) => (
+          <Tr key={row.siteid}>
+            <Td>{row.lastname}</Td>
+            <Td>{row.siteid}</Td>
+            <Td>{row.daysleft}</Td>
+            <Td>{row.notes}</Td>
+          </Tr>
+        ))
       )}
     </>
   );
