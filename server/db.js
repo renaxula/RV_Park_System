@@ -234,12 +234,17 @@ async function loadDemoData() {
       rate: 5.0,
       maxLength: 0,
     },
+    {
+      siteType: "extra Deep",
+      rate: 25.0,
+      maxLength: 55,
+    },
   ];
-  //refrence: 1=small, 2=med, 3=large, 4=rental, 5=tent Only, 6=dry
+  //refrence: 1=small, 2=med, 3=large, 4=rental, 5=tent Only, 6=dry, 7=extra Deep
   const sites = [
     {
       siteName: "1",
-      siteTypeId: 1,
+      siteTypeId: 7,
     },
     {
       siteName: "2",
@@ -250,15 +255,171 @@ async function loadDemoData() {
       siteTypeId: 1,
     },
     {
+      siteName: "4",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "5",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "6",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "7",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "8",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "9",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "10",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "11",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "12",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "13",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "14",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "15",
+      siteTypeId: 1,
+    },
+    {
+      siteName: "16",
+      siteTypeId: 1,
+    },
+    {
       siteName: "17",
-      siteTypeId: 2,
+      siteTypeId: 7,
     },
     {
       siteName: "18",
       siteTypeId: 2,
     },
     {
+      siteName: "19",
+      siteTypeId: 2,
+    },
+    {
+      siteName: "20",
+      siteTypeId: 2,
+    },
+    {
+      siteName: "21",
+      siteTypeId: 7,
+    },
+    {
+      siteName: "22",
+      siteTypeId: 2,
+    },
+    {
+      siteName: "23",
+      siteTypeId: 2,
+    },
+    {
+      siteName: "24",
+      siteTypeId: 2,
+    },
+    {
+      siteName: "25",
+      siteTypeId: 2,
+    },
+    {
+      siteName: "26",
+      siteTypeId: 2,
+    },
+    {
+      siteName: "27",
+      siteTypeId: 2,
+    },
+    {
+      siteName: "28",
+      siteTypeId: 2,
+    },
+    {
+      siteName: "29",
+      siteTypeId: 2,
+    },
+    {
+      siteName: "30",
+      siteTypeId: 2,
+    },
+    {
+      siteName: "31",
+      siteTypeId: 2,
+    },
+    {
       siteName: "32",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "33",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "34",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "35",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "36",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "37",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "38",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "39",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "40",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "41",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "42",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "43",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "44",
+      siteTypeId: 3,
+    },
+    {
+      siteName: "45",
       siteTypeId: 3,
     },
     {
@@ -277,78 +438,209 @@ async function loadDemoData() {
       siteName: "dry-1",
       siteTypeId: 6,
     },
+    {
+      siteName: "dry-2",
+      siteTypeId: 6,
+    },
+    {
+      siteName: "dry-3",
+      siteTypeId: 6,
+    },
+    {
+      siteName: "dry-4",
+      siteTypeId: 6,
+    },
   ];
 
   const reservations = [
-  // --- Original Reservations ---
-  {
-    userId: 1,
-    siteId: 1,
-    startDate: "2025-11-1",
-    endDate: "2025-11-14",
-    notes: "test 1-1",
-  },
-  {
-    userId: 1,
-    siteId: 1,
-    startDate: "2025-11-14",
-    endDate: "2025-11-20",
-    notes: "test 1-2",
-  },
-  {
-    userId: 1,
-    siteId: 2,
-    startDate: "2025-11-5",
-    endDate: "2025-11-14",
-    notes: "test 2-1",
-  },
-  {
-    userId: 1,
-    siteId: 2,
-    startDate: "2025-11-25",
-    endDate: "2025-11-30",
-    notes: "test 2-2",
-  },
+    // --- Original Reservations ---
+    {
+      userId: 1,
+      siteId: 1,
+      startDate: "2025-11-1",
+      endDate: "2025-11-14",
+      notes: "test 1-1",
+    },
+    {
+      userId: 1,
+      siteId: 1,
+      startDate: "2025-11-14",
+      endDate: "2025-11-20",
+      notes: "test 1-2",
+    },
+    {
+      userId: 1,
+      siteId: 2,
+      startDate: "2025-11-5",
+      endDate: "2025-11-14",
+      notes: "test 2-1",
+    },
+    {
+      userId: 1,
+      siteId: 2,
+      startDate: "2025-11-25",
+      endDate: "2025-11-30",
+      notes: "test 2-2",
+    },
 
-  // --- New Reservations (siteId 1–10 only) ---
+    // --- New Reservations (siteId 1–10 only) ---
 
-  // Site 3
-  { userId: 2, siteId: 3, startDate: "2025-10-1", endDate: "2025-10-6", notes: "oct stay 3-1" },
-  { userId: 3, siteId: 3, startDate: "2025-10-8", endDate: "2025-10-12", notes: "oct stay 3-2" },
-  { userId: 1, siteId: 3, startDate: "2025-10-15", endDate: "2025-10-20", notes: "oct stay 3-3" },
+    // Site 3
+    {
+      userId: 2,
+      siteId: 3,
+      startDate: "2025-10-1",
+      endDate: "2025-10-6",
+      notes: "oct stay 3-1",
+    },
+    {
+      userId: 3,
+      siteId: 3,
+      startDate: "2025-10-8",
+      endDate: "2025-10-12",
+      notes: "oct stay 3-2",
+    },
+    {
+      userId: 1,
+      siteId: 3,
+      startDate: "2025-10-15",
+      endDate: "2025-10-20",
+      notes: "oct stay 3-3",
+    },
 
-  // Site 4
-  { userId: 2, siteId: 4, startDate: "2025-10-10", endDate: "2025-10-18", notes: "oct 4-1" },
-  { userId: 3, siteId: 4, startDate: "2025-11-2", endDate: "2025-11-10", notes: "nov 4-2" },
-  { userId: 1, siteId: 4, startDate: "2025-12-5", endDate: "2025-12-12", notes: "dec 4-3" },
+    // Site 4
+    {
+      userId: 2,
+      siteId: 4,
+      startDate: "2025-10-10",
+      endDate: "2025-10-18",
+      notes: "oct 4-1",
+    },
+    {
+      userId: 3,
+      siteId: 4,
+      startDate: "2025-11-2",
+      endDate: "2025-11-10",
+      notes: "nov 4-2",
+    },
+    {
+      userId: 1,
+      siteId: 4,
+      startDate: "2025-12-5",
+      endDate: "2025-12-12",
+      notes: "dec 4-3",
+    },
 
-  // Site 5
-  { userId: 2, siteId: 5, startDate: "2025-10-20", endDate: "2025-10-28", notes: "oct 5-1" },
-  { userId: 3, siteId: 5, startDate: "2025-11-15", endDate: "2025-11-22", notes: "nov 5-2" },
-  { userId: 1, siteId: 5, startDate: "2025-12-1", endDate: "2025-12-4", notes: "dec short 5" },
+    // Site 5
+    {
+      userId: 2,
+      siteId: 5,
+      startDate: "2025-10-20",
+      endDate: "2025-10-28",
+      notes: "oct 5-1",
+    },
+    {
+      userId: 3,
+      siteId: 5,
+      startDate: "2025-11-15",
+      endDate: "2025-11-22",
+      notes: "nov 5-2",
+    },
+    {
+      userId: 1,
+      siteId: 5,
+      startDate: "2025-12-1",
+      endDate: "2025-12-4",
+      notes: "dec short 5",
+    },
 
-  // Site 6
-  { userId: 3, siteId: 6, startDate: "2025-10-5", endDate: "2025-10-9", notes: "oct 6-1" },
-  { userId: 1, siteId: 6, startDate: "2025-10-22", endDate: "2025-10-29", notes: "oct 6-2" },
-  { userId: 2, siteId: 6, startDate: "2025-11-18", endDate: "2025-11-25", notes: "nov 6-3" },
+    // Site 6
+    {
+      userId: 3,
+      siteId: 6,
+      startDate: "2025-10-5",
+      endDate: "2025-10-9",
+      notes: "oct 6-1",
+    },
+    {
+      userId: 1,
+      siteId: 6,
+      startDate: "2025-10-22",
+      endDate: "2025-10-29",
+      notes: "oct 6-2",
+    },
+    {
+      userId: 2,
+      siteId: 6,
+      startDate: "2025-11-18",
+      endDate: "2025-11-25",
+      notes: "nov 6-3",
+    },
 
-  // Site 7
-  { userId: 1, siteId: 7, startDate: "2025-12-10", endDate: "2025-12-18", notes: "dec 7-1" },
-  { userId: 2, siteId: 7, startDate: "2025-10-12", endDate: "2025-10-16", notes: "oct 7-2" },
-  { userId: 3, siteId: 7, startDate: "2025-11-28", endDate: "2025-12-3", notes: "nov-dec 7-3" },
+    // Site 7
+    {
+      userId: 1,
+      siteId: 7,
+      startDate: "2025-12-10",
+      endDate: "2025-12-18",
+      notes: "dec 7-1",
+    },
+    {
+      userId: 2,
+      siteId: 7,
+      startDate: "2025-10-12",
+      endDate: "2025-10-16",
+      notes: "oct 7-2",
+    },
+    {
+      userId: 3,
+      siteId: 7,
+      startDate: "2025-11-28",
+      endDate: "2025-12-3",
+      notes: "nov-dec 7-3",
+    },
 
-  // Site 8
-  { userId: 2, siteId: 8, startDate: "2025-10-3", endDate: "2025-10-7", notes: "oct 8-1" },
-  { userId: 3, siteId: 8, startDate: "2025-11-12", endDate: "2025-11-15", notes: "nov 8-2" },
+    // Site 8
+    {
+      userId: 2,
+      siteId: 8,
+      startDate: "2025-10-3",
+      endDate: "2025-10-7",
+      notes: "oct 8-1",
+    },
+    {
+      userId: 3,
+      siteId: 8,
+      startDate: "2025-11-12",
+      endDate: "2025-11-15",
+      notes: "nov 8-2",
+    },
 
-  // Site 9
-  { userId: 1, siteId: 9, startDate: "2025-12-20", endDate: "2025-12-30", notes: "dec 9" },
+    // Site 9
+    {
+      userId: 1,
+      siteId: 9,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "dec 9",
+    },
 
-  // Site 10
-  { userId: 2, siteId: 10, startDate: "2025-10-18", endDate: "2025-10-24", notes: "oct 10-1" },
-  { userId: 3, siteId: 10, startDate: "2025-11-5", endDate: "2025-11-9", notes: "nov 10-2" }
-];
-
+    // Site 10
+    {
+      userId: 2,
+      siteId: 10,
+      startDate: "2025-10-18",
+      endDate: "2025-10-24",
+      notes: "oct 10-1",
+    },
+    {
+      userId: 3,
+      siteId: 10,
+      startDate: "2025-11-5",
+      endDate: "2025-11-9",
+      notes: "nov 10-2",
+    },
+  ];
 
   const roles = [
     {
@@ -598,26 +890,17 @@ async function getRoleByName(roleName) {
 }
 
 async function createReservation(reservation) {
-  const {
-    userId,
-    siteId,
-    startDate,
-    endDate,
-    notes,
-  } = reservation;
+  const { userId, siteId, startDate, endDate, notes } = reservation;
 
   const query = `
     INSERT INTO reservations (userId, siteId, startDate, endDate, notes)
     VALUES ($1, $2, $3, $4, $5)
-    RETURNING *;`
-  ;
-
-  const values = [userId, siteId, startDate, endDate, notes || ''];
+    RETURNING *;`;
+  const values = [userId, siteId, startDate, endDate, notes || ""];
 
   const result = await pool.query(query, values);
   return result.rows[0];
 }
-
 
 async function getReservationsByUser(userId) {
   const query = `
@@ -625,16 +908,14 @@ async function getReservationsByUser(userId) {
     FROM reservations r
     join sites s on r.siteid = s.siteid 
     join site_types st on st.sitetypeid = s.sitetypeid 
-    WHERE userid = ${userId};`
-  ;
-
+    WHERE userid = ${userId};`;
   const result = await pool.query(query);
   return result.rows;
 }
 
 async function updateReservation(reservationId, updates) {
   const { siteId, startDate, endDate, notes } = updates;
-  
+
   const query = `
     UPDATE reservations 
     SET siteId = COALESCE($1, siteId),
@@ -644,7 +925,7 @@ async function updateReservation(reservationId, updates) {
     WHERE reservationId = $5
     RETURNING *;
   `;
-  
+
   const values = [siteId, startDate, endDate, notes, reservationId];
   const result = await pool.query(query, values);
   return result.rows[0];
@@ -656,7 +937,7 @@ async function deleteReservation(reservationId) {
     WHERE reservationId = $1
     RETURNING *;
   `;
-  
+
   const result = await pool.query(query, [reservationId]);
   return result.rows[0];
 }
@@ -670,7 +951,7 @@ async function getReservationById(reservationId) {
     JOIN users u ON r.userid = u.userid
     WHERE r.reservationId = $1;
   `;
-  
+
   const result = await pool.query(query, [reservationId]);
   return result.rows[0];
 }
@@ -684,7 +965,7 @@ async function getAllReservations() {
     JOIN users u ON r.userid = u.userid
     ORDER BY r.startdate DESC;
   `;
-  
+
   const result = await pool.query(query);
   return result.rows;
 }
@@ -706,5 +987,5 @@ module.exports = {
   updateReservation,
   deleteReservation,
   getReservationById,
-  getAllReservations
+  getAllReservations,
 };
