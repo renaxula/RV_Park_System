@@ -81,6 +81,62 @@ function requireRole(role) {
   };
 }
 
+// Reservation validation: 14-day limit in peak season (April-October), 6 months advance max
+function validateReservationDates(startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Check if dates are valid
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return { valid: false, error: "Invalid date format" };
+  }
+
+  // Check end date is after start date
+  if (end <= start) {
+    return { valid: false, error: "End date must be after start date" };
+  }
+
+  // Check 6 months advance booking limit
+  const sixMonthsFromNow = new Date(today);
+  sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+  if (start > sixMonthsFromNow) {
+    return { valid: false, error: "Reservations can only be made up to 6 months in advance" };
+  }
+
+  // Calculate duration in days
+  const durationMs = end - start;
+  const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
+
+  // Check if any part of the reservation falls in peak season (April = 3, October = 9)
+  const isPeakSeason = (date) => {
+    const month = date.getMonth();
+    return month >= 3 && month <= 9; // April (3) to October (9)
+  };
+
+  // Check each day of the reservation to see if it touches peak season
+  let touchesPeakSeason = false;
+  const checkDate = new Date(start);
+  while (checkDate < end) {
+    if (isPeakSeason(checkDate)) {
+      touchesPeakSeason = true;
+      break;
+    }
+    checkDate.setDate(checkDate.getDate() + 1);
+  }
+
+  // If reservation touches peak season, limit to 14 days
+  if (touchesPeakSeason && durationDays > 14) {
+    return { 
+      valid: false, 
+      error: "Reservations during peak season (April - October) are limited to 14 days" 
+    };
+  }
+
+  return { valid: true };
+}
+
 function establishSession(req, user) {
   return new Promise((resolve, reject) => {
     req.session.regenerate((err) => {
@@ -377,6 +433,14 @@ app.get("/api/occupied", async (req, res) => {
 
 app.post('/reservations', async (req, res) => {
   try {
+    const { startDate, endDate } = req.body;
+
+    // Validate reservation dates
+    const validation = validateReservationDates(startDate, endDate);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.error });
+    }
+
     const reservation = await createReservation(req.body);
     res.status(201).json({
       message: "Reservation created",
@@ -434,6 +498,12 @@ app.put("/reservations/:id", requireAuth, async (req, res) => {
     
     if (!isOwner && !isStaff) {
       return res.status(403).json({ error: "Not authorized to edit this reservation" });
+    }
+
+    // Validate reservation dates
+    const validation = validateReservationDates(startDate, endDate);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.error });
     }
 
     const updated = await updateReservation(reservationId, {

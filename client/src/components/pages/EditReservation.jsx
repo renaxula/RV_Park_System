@@ -11,6 +11,58 @@ function formatDateForInput(dateStr) {
   return dateStr.split("T")[0];
 }
 
+// Validation: 14-day limit in peak season (April-October), 6 months advance max
+function validateReservationDates(startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return { valid: false, error: "Invalid date format" };
+  }
+
+  if (end <= start) {
+    return { valid: false, error: "End date must be after start date" };
+  }
+
+  // Check 6 months advance booking limit
+  const sixMonthsFromNow = new Date(today);
+  sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+  if (start > sixMonthsFromNow) {
+    return { valid: false, error: "Reservations can only be made up to 6 months in advance" };
+  }
+
+  // Calculate duration in days
+  const durationMs = end - start;
+  const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
+
+  // Check if any part of the reservation falls in peak season (April-October)
+  const isPeakSeason = (date) => {
+    const month = date.getMonth();
+    return month >= 3 && month <= 9;
+  };
+
+  let touchesPeakSeason = false;
+  const checkDate = new Date(start);
+  while (checkDate < end) {
+    if (isPeakSeason(checkDate)) {
+      touchesPeakSeason = true;
+      break;
+    }
+    checkDate.setDate(checkDate.getDate() + 1);
+  }
+
+  if (touchesPeakSeason && durationDays > 14) {
+    return { 
+      valid: false, 
+      error: "Reservations during peak season (April - October) are limited to 14 days" 
+    };
+  }
+
+  return { valid: true };
+}
+
 export function EditReservation() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -38,6 +90,13 @@ export function EditReservation() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    // Validate reservation dates
+    const validation = validateReservationDates(form.startDate, form.endDate);
+    if (!validation.valid) {
+      alert(validation.error);
+      return;
+    }
 
     try {
       await axios.put(
