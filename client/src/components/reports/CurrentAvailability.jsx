@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import styled from "styled-components";
 import useApiReports from "./useApiReports";
 
-function CurrentAvailability({ startDate, endDate }) {
+function CurrentAvailability({
+  startDate,
+  endDate,
+  onDataLoad,
+  currentPage = 1,
+  itemsPerPage = 20,
+}) {
   const [rows, setRows] = useState([]);
   const [dateFilter, setDateFilter] = useState("");
   const { isLoading, error, sendRequest: fetchSites } = useApiReports();
@@ -25,7 +31,10 @@ function CurrentAvailability({ startDate, endDate }) {
         {
           url: `http://localhost:3000/api/availableSites${dateFilter}`,
         },
-        setRows
+        (data) => {
+          setRows(data);
+          if (onDataLoad) onDataLoad(data);
+        }
       );
       // //add '?startDate=YYYY-MM-DD' to get day other than today
       // //example: .../availableSites?startDate=2025-11-14
@@ -33,6 +42,10 @@ function CurrentAvailability({ startDate, endDate }) {
     }
     loadAvailability();
   }, [dateFilter]);
+
+  // Paginate the rows
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRows = rows.slice(startIndex, startIndex + itemsPerPage);
 
   // If no rows, show "No Open Sites"
   if (rows.length === 0) {
@@ -45,7 +58,7 @@ function CurrentAvailability({ startDate, endDate }) {
 
   return (
     <>
-      {rows.map((row) => (
+      {paginatedRows.map((row) => (
         <Tr key={row.siteid}>
           <Td>{row.sitename}</Td>
           <Td>{row.sitetype}</Td>
