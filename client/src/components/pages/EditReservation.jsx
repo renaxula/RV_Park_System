@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
 import axios from "axios";
 import { Card } from "../ui/Card";
@@ -14,45 +14,14 @@ function formatDateForInput(dateStr) {
 export function EditReservation() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, homePage } = useAuth();
+  const { homePage } = useAuth();
  
   const reservation = location.state?.reservation || null;
 
   const [form, setForm] = useState({
-    siteName: reservation?.sitename || "",
-    siteType: reservation?.sitetype || "",
-    siteId: reservation?.siteid || "",
     startDate: formatDateForInput(reservation?.startdate) || "",
     endDate: formatDateForInput(reservation?.enddate) || "",
-    notes: reservation?.notes || "",
   });
-
-  const [availableSites, setAvailableSites] = useState([]);
-  const [loadingSites, setLoadingSites] = useState(false);
-
-  // Fetch available sites when dates change
-  useEffect(() => {
-    if (!form.startDate || !form.endDate) return;
-
-    async function fetchSites() {
-      setLoadingSites(true);
-      try {
-        const res = await axios.get("http://localhost:3000/api/availableSites", {
-          params: {
-            startDate: form.startDate,
-            endDate: form.endDate
-          }
-        });
-        setAvailableSites(res.data);
-      } catch (err) {
-        console.error("Error fetching available sites:", err);
-      } finally {
-        setLoadingSites(false);
-      }
-    }
-
-    fetchSites();
-  }, [form.startDate, form.endDate]);
 
   if (!reservation) {
     return (
@@ -67,30 +36,6 @@ export function EditReservation() {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  function handleSiteChange(e) {
-    const selectedSiteId = e.target.value;
-    if (selectedSiteId === String(reservation.siteid)) {
-      // User selected the original site
-      setForm({
-        ...form,
-        siteId: reservation.siteid,
-        siteName: reservation.sitename,
-        siteType: reservation.sitetype
-      });
-    } else {
-      // User selected a different available site
-      const selectedSite = availableSites.find(s => String(s.siteid) === selectedSiteId);
-      if (selectedSite) {
-        setForm({
-          ...form,
-          siteId: selectedSite.siteid,
-          siteName: selectedSite.sitename,
-          siteType: selectedSite.sitetype
-        });
-      }
-    }
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
 
@@ -98,16 +43,13 @@ export function EditReservation() {
       await axios.put(
         `http://localhost:3000/reservations/${reservation.reservationid}`,
         {
-          siteId: form.siteId,
           startDate: form.startDate,
           endDate: form.endDate,
-          notes: form.notes,
         },
         { withCredentials: true }
       );
 
       alert("Reservation updated!");
-      console.log("Navigating to homepage:", homePage);
       navigate(homePage);
     } catch (err) {
       console.error(err);
@@ -136,45 +78,20 @@ export function EditReservation() {
       <Form onSubmit={handleSubmit}>
         <Title>Edit Reservation</Title>
 
+        <InfoSection>
+          <InfoRow>
+            <InfoLabel>Site:</InfoLabel>
+            <InfoValue>{reservation.sitename}</InfoValue>
+          </InfoRow>
+          <InfoRow>
+            <InfoLabel>Site Type:</InfoLabel>
+            <InfoValue>{reservation.sitetype}</InfoValue>
+          </InfoRow>
+        </InfoSection>
+
         <Grid>
-
           <Field>
-            <Label>Site</Label>
-            <SelectInput
-              name="siteId"
-              value={form.siteId}
-              onChange={handleSiteChange}
-            >
-              {/* Always show the current reservation's site as an option */}
-              <option value={reservation.siteid}>
-                {reservation.sitename} — {reservation.sitetype} (current)
-              </option>
-              
-              {/* Show other available sites */}
-              {loadingSites ? (
-                <option disabled>Loading available sites...</option>
-              ) : (
-                availableSites
-                  .filter(s => s.siteid !== reservation.siteid)
-                  .map((s) => (
-                    <option key={s.siteid} value={s.siteid}>
-                      {s.sitename} — {s.sitetype} — ${s.rate}/night
-                    </option>
-                  ))
-              )}
-            </SelectInput>
-            <HelpText>
-              Change dates to see other available sites
-            </HelpText>
-          </Field>
-
-          <Field>
-            <Label>Site Type</Label>
-            <TextInput disabled name="siteType" value={form.siteType} />
-          </Field>
-
-          <Field>
-            <Label>Start Date</Label>
+            <Label>Check-in Date</Label>
             <DateInput
               name="startDate"
               type="date"
@@ -184,7 +101,7 @@ export function EditReservation() {
           </Field>
 
           <Field>
-            <Label>End Date</Label>
+            <Label>Check-out Date</Label>
             <DateInput
               name="endDate"
               type="date"
@@ -192,17 +109,6 @@ export function EditReservation() {
               onChange={updateField}
             />
           </Field>
-
-          <Field style={{ gridColumn: "1 / -1" }}>
-            <Label>Notes</Label>
-            <TextInput
-              name="notes"
-              value={form.notes}
-              onChange={updateField}
-              placeholder="Add any notes..."
-            />
-          </Field>
-
         </Grid>
 
         <Actions>
@@ -222,7 +128,7 @@ export function EditReservation() {
 
 
 
-/* Styled Components (same as before, adding CancelButton) */
+/* Styled Components */
 
 const Form = styled.form`
   display: flex;
@@ -235,6 +141,32 @@ const Title = styled.h2`
   font-size: 1.25rem;
   font-weight: 600;
   color: #0f172a;
+`;
+
+const InfoSection = styled.div`
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const InfoRow = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const InfoLabel = styled.span`
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+`;
+
+const InfoValue = styled.span`
+  font-size: 0.875rem;
+  color: #0f172a;
+  font-weight: 600;
 `;
 
 const Grid = styled.div`
@@ -259,7 +191,7 @@ const Label = styled.label`
   font-weight: 600;
 `;
 
-const sharedInput = `
+const DateInput = styled.input`
   width: 100%;
   padding: 10px 12px;
   border-radius: 8px;
@@ -275,16 +207,6 @@ const sharedInput = `
     border-color: rgba(59,130,246,0.9);
     box-shadow: 0 6px 18px rgba(59,130,246,0.08);
   }
-`;
-
-const SelectInput = styled.select`${sharedInput}`;
-const TextInput = styled.input`${sharedInput}`;
-const DateInput = styled.input`${sharedInput}`;
-
-const HelpText = styled.span`
-  font-size: 0.75rem;
-  color: #64748b;
-  margin-top: 4px;
 `;
 
 const Actions = styled.div`
