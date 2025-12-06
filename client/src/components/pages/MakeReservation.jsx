@@ -7,7 +7,6 @@ import { StyledButton } from "../ui/StyledButton";
 import { useAuth } from "../router/AuthContext";
 import { useNavigate } from "react-router-dom";
 
-
 /*
   Filter down spots based on RV size
   Filter so it shows the smallest avialable sites
@@ -35,7 +34,10 @@ function validateReservationDates(startDate, endDate) {
   const sixMonthsFromNow = new Date(today);
   sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
   if (start > sixMonthsFromNow) {
-    return { valid: false, error: "Reservations can only be made up to 6 months in advance" };
+    return {
+      valid: false,
+      error: "Reservations can only be made up to 6 months in advance",
+    };
   }
 
   // Calculate duration in days
@@ -59,9 +61,10 @@ function validateReservationDates(startDate, endDate) {
   }
 
   if (touchesPeakSeason && durationDays > 14) {
-    return { 
-      valid: false, 
-      error: "Reservations during peak season (April - October) are limited to 14 days" 
+    return {
+      valid: false,
+      error:
+        "Reservations during peak season (April - October) are limited to 14 days",
     };
   }
 
@@ -73,12 +76,14 @@ export function MakeReservation() {
   const prefillSpot = location.state?.spot;
   const { user, homepage } = useAuth();
   const navigate = useNavigate();
+  const [usersList, setUsersList] = useState([]);
 
   const [form, setForm] = useState({
+    userId: user.role != "customer" ? "" : user.userId,
     rvSize: prefillSpot?.type || "",
     startDate: "",
     endDate: "",
-    spot: prefillSpot?.id || ""
+    spot: prefillSpot?.id || "",
   });
 
   const [availableSpots, setAvailableSpots] = useState([]);
@@ -93,12 +98,15 @@ export function MakeReservation() {
 
     async function fetchSpots() {
       try {
-        const res = await axios.get("http://localhost:3000/api/availableSites", {
-          params: {
-            startDate: form.startDate,
-            endDate: form.endDate
+        const res = await axios.get(
+          "http://localhost:3000/api/availableSites",
+          {
+            params: {
+              startDate: form.startDate,
+              endDate: form.endDate,
+            },
           }
-        });
+        );
         setAvailableSpots(res.data);
       } catch (err) {
         console.error(err);
@@ -138,7 +146,7 @@ export function MakeReservation() {
       siteId: parseInt(form.spot),
       startDate: form.startDate,
       endDate: form.endDate,
-      notes: `RV: ${form.rvSize}`
+      notes: `RV: ${form.rvSize}`,
     };
 
     try {
@@ -149,7 +157,7 @@ export function MakeReservation() {
         rvSize: "",
         startDate: "",
         endDate: "",
-        spot: ""
+        spot: "",
       });
       setAvailableSpots([]);
       window.location.reload();
@@ -157,8 +165,31 @@ export function MakeReservation() {
       console.error(err);
       alert("Error making reservation");
     }
-
   }
+
+  useEffect(() => {
+    if (user.role == "admin" || user.role == "employee") {
+      fetchUsers();
+    }
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/admin/users", {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch users");
+      }
+
+      const data = await response.json();
+      setUsersList(data);
+
+      console.log(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   return (
     <Card>
@@ -166,15 +197,38 @@ export function MakeReservation() {
         <Title>Make a Reservation</Title>
 
         <Grid>
-
           <Field>
-            <Label>Name</Label>
-            <TextInput name="name" value={form.name} onChange={updateField} />
+            <Label>User</Label>
+            {user.role != "customer" ? (
+              <SelectInput
+                value={form.userId}
+                name="userId"
+                onChange={updateField}
+              >
+                <option value="" disabled selected>
+                  -- Select User --
+                </option>
+                <option value="new">New User</option>
+                {usersList.map((u) => {
+                  return (
+                    <option key={u.userId} value={u.userId}>
+                      {u.emailaddress} - {u.lastname}, {u.firstname}
+                    </option>
+                  );
+                })}
+              </SelectInput>
+            ) : (
+              ""
+            )}
           </Field>
 
           <Field>
             <Label>RV Size</Label>
-            <TextInput name="rvSize" value={form.rvSize} onChange={updateField} />
+            <TextInput
+              name="rvSize"
+              value={form.rvSize}
+              onChange={updateField}
+            />
           </Field>
 
           <Field>
@@ -216,13 +270,13 @@ export function MakeReservation() {
               ))}
             </SelectInput>
           </Field>
-
         </Grid>
 
         <Actions>
-          <StyledButton $emphasize={true} type="submit">Submit Reservation</StyledButton>
+          <StyledButton $emphasize={true} type="submit">
+            Submit Reservation
+          </StyledButton>
         </Actions>
-
       </Form>
     </Card>
   );
@@ -280,7 +334,6 @@ const sharedInput = `
     box-shadow: 0 6px 18px rgba(59,130,246,0.08);
   }
 `;
-
 
 const SelectInput = styled.select`
   ${sharedInput}
