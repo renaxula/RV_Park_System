@@ -197,9 +197,9 @@ export function MakeReservation() {
         <Title>Make a Reservation</Title>
 
         <Grid>
-          <Field>
-            <Label>User</Label>
-            {user.role != "customer" ? (
+          {user.role != "customer" ? (
+            <Field>
+              <Label>User</Label>
               <SelectInput
                 value={form.userId}
                 name="userId"
@@ -217,10 +217,10 @@ export function MakeReservation() {
                   );
                 })}
               </SelectInput>
-            ) : (
-              ""
-            )}
-          </Field>
+            </Field>
+          ) : (
+            ""
+          )}
 
           <Field>
             <Label>RV Size</Label>
