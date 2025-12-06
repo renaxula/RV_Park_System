@@ -142,7 +142,7 @@ export function MakeReservation() {
     }
 
     const body = {
-      userId: parseInt(user.userId),
+      userId: parseInt(form.userId),
       siteId: parseInt(form.spot),
       startDate: form.startDate,
       endDate: form.endDate,
