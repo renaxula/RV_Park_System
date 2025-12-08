@@ -1,11 +1,10 @@
 import styled from "styled-components";
 import axios from "axios";
 import { Card } from "../ui/Card";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { StyledButton } from "../ui/StyledButton";
 import { useAuth } from "../router/AuthContext";
-import { useNavigate } from "react-router-dom";
 
 /*
   Filter down spots based on RV size
@@ -87,10 +86,77 @@ export function MakeReservation() {
   });
 
   const [availableSpots, setAvailableSpots] = useState([]);
+  const [costPreview, setCostPreview] = useState(null);
+  const [holidayWarning, setHolidayWarning] = useState(null);
 
   function updateField(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    // If start date is changed, auto-populate end date to 1 week later
+    if (name === "startDate" && value) {
+      const startDate = new Date(value);
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 7);
+      const endDateStr = endDate.toISOString().split("T")[0];
+      
+      setForm({ ...form, startDate: value, endDate: endDateStr });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
   }
+
+  // Calculate cost when spot and dates are selected
+  useEffect(() => {
+    if (!form.spot || !form.startDate || !form.endDate) {
+      setCostPreview(null);
+      return;
+    }
+
+    async function fetchCost() {
+      try {
+        const res = await axios.get("http://localhost:3000/api/calculate-cost", {
+          params: {
+            siteId: form.spot,
+            startDate: form.startDate,
+            endDate: form.endDate,
+          },
+        });
+        setCostPreview(res.data);
+      } catch (err) {
+        console.error("Error calculating cost:", err);
+      }
+    }
+
+    fetchCost();
+  }, [form.spot, form.startDate, form.endDate]);
+
+  // Check for holidays when dates are selected
+  useEffect(() => {
+    if (!form.startDate || !form.endDate) {
+      setHolidayWarning(null);
+      return;
+    }
+
+    async function checkHolidays() {
+      try {
+        const res = await axios.get("http://localhost:3000/api/holidays/check", {
+          params: {
+            startDate: form.startDate,
+            endDate: form.endDate,
+          },
+        });
+        if (res.data.isHoliday) {
+          setHolidayWarning(res.data.holidays);
+        } else {
+          setHolidayWarning(null);
+        }
+      } catch (err) {
+        console.error("Error checking holidays:", err);
+      }
+    }
+
+    checkHolidays();
+  }, [form.startDate, form.endDate]);
 
   // fetch availability when both dates selected
   useEffect(() => {
@@ -151,16 +217,20 @@ export function MakeReservation() {
 
     try {
       const res = await axios.post("http://localhost:3000/reservations", body);
-      alert("Reservation created!");
-      // Reset form after successful submission
-      setForm({
-        rvSize: "",
-        startDate: "",
-        endDate: "",
-        spot: "",
+      
+      // Get the selected spot details for the payment page
+      const selectedSpot = availableSpots.find(s => s.siteid === parseInt(form.spot));
+      
+      // Navigate to payment page with reservation details
+      navigate("/payment", {
+        state: {
+          reservation: res.data.reservation,
+          costDetails: costPreview,
+          spotDetails: selectedSpot,
+          isHoliday: holidayWarning !== null,
+          holidayNames: holidayWarning?.map(h => h.name) || [],
+        },
       });
-      setAvailableSpots([]);
-      window.location.reload();
     } catch (err) {
       console.error(err);
       alert("Error making reservation");
@@ -272,6 +342,38 @@ export function MakeReservation() {
           </Field>
         </Grid>
 
+        {holidayWarning && (
+          <HolidayWarning>
+            <WarningIcon>⚠️</WarningIcon>
+            <WarningText>
+              <strong>Holiday/Special Event Notice:</strong> Your reservation overlaps with{" "}
+              {holidayWarning.map(h => h.name).join(", ")}. 
+              Cancellation policy: 1-day fee applies regardless of timing.
+            </WarningText>
+          </HolidayWarning>
+        )}
+
+        {costPreview && (
+          <CostPreview>
+            <CostTitle>Reservation Cost Preview</CostTitle>
+            <CostBreakdown>
+              <CostRow>
+                <CostLabel>Nightly Rate:</CostLabel>
+                <CostValue>${parseFloat(costPreview.rate).toFixed(2)}</CostValue>
+              </CostRow>
+              <CostRow>
+                <CostLabel>Number of Nights:</CostLabel>
+                <CostValue>{costPreview.nights}</CostValue>
+              </CostRow>
+              <CostDivider />
+              <CostRow $total>
+                <CostLabel>Total Cost:</CostLabel>
+                <CostValue>${parseFloat(costPreview.totalCost).toFixed(2)}</CostValue>
+              </CostRow>
+            </CostBreakdown>
+          </CostPreview>
+        )}
+
         <Actions>
           <StyledButton $emphasize={true} type="submit">
             Submit Reservation
@@ -358,4 +460,68 @@ const TimeInput = styled.input`
 const Actions = styled.div`
   display: flex;
   justify-content: flex-end;
+`;
+
+const HolidayWarning = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  margin-top: 8px;
+`;
+
+const WarningIcon = styled.span`
+  font-size: 1.25rem;
+`;
+
+const WarningText = styled.p`
+  margin: 0;
+  font-size: 0.875rem;
+  color: #92400e;
+  line-height: 1.5;
+`;
+
+const CostPreview = styled.div`
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid #10b981;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-top: 8px;
+`;
+
+const CostTitle = styled.h3`
+  margin: 0 0 14px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #065f46;
+`;
+
+const CostBreakdown = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const CostRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: ${({ $total }) => ($total ? "1.1rem" : "0.95rem")};
+  font-weight: ${({ $total }) => ($total ? "700" : "500")};
+  color: ${({ $total }) => ($total ? "#047857" : "#064e3b")};
+`;
+
+const CostLabel = styled.span``;
+
+const CostValue = styled.span`
+  font-family: "SF Mono", "Monaco", "Inconsolata", monospace;
+`;
+
+const CostDivider = styled.hr`
+  border: none;
+  border-top: 1px dashed #10b981;
+  margin: 6px 0;
 `;
