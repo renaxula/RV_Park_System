@@ -2,10 +2,7 @@ import { useState, useEffect } from "react";
 import { Card } from "../ui/Card";
 import styled from "styled-components";
 
-const API_BASE =
-  import.meta?.env?.VITE_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:3000";
-
-export function SiteRates() {
+export function ChangeRates() {
   const [siteTypes, setSiteTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,12 +16,21 @@ export function SiteRates() {
   const fetchSiteTypes = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/admin/site-types`, {
+      const res = await fetch("http://localhost:3000/admin/site-types", {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch site types");
       const data = await res.json();
-      setSiteTypes(data);
+      console.log(data);
+
+      // Convert rate strings to numbers
+      const numericData = data.map((s) => ({
+      siteTypeId: s.siteTypeId || s.sitetypeid,
+      name: s.name,
+      rate: Number(s.rate || 0),
+    }));
+    setSiteTypes(numericData);
+      setSiteTypes(numericData);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -32,33 +38,52 @@ export function SiteRates() {
     }
   };
 
-  const handleRateChange = async (siteTypeId, newRate) => {
-    setUpdatingId(siteTypeId);
-    setError(null);
-    setMessage(null);
+const handleRateChange = async (siteTypeId, newRate) => {
 
-    try {
-      const res = await fetch(`${API_BASE}/admin/site-types/${siteTypeId}/rate`, {
-        method: "PUT",
+  // Convert to number and validate
+  const parsedRate = parseFloat(newRate);
+  if (isNaN(parsedRate) || parsedRate < 0) return;
+
+  console.log("TEST:"+siteTypeId);
+  setUpdatingId(siteTypeId);
+  setError(null);
+  setMessage(null);
+
+  try {
+    const res = await fetch(
+      `http://localhost:3000/admin/change-site-rate`,
+      {
+        method: "POST", // changed from PUT to POST
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rate: parseFloat(newRate) }),
-      });
+        body: JSON.stringify({
+          sitetype: siteTypeId, // send the siteTypeId as sitetype
+          rate: parsedRate,
+        }),
+      }
+    );
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not update rate");
+    const data = await res.json();
 
-      setMessage(`Rate updated for ${data.name} to $${newRate}`);
-      // Update local state
-      setSiteTypes(siteTypes.map(s =>
-        s.siteTypeId === siteTypeId ? { ...s, rate: parseFloat(newRate) } : s
-      ));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setUpdatingId(null);
-    }
-  };
+    // Handle errors from backend
+    if (!res.ok) throw new Error(data.error || "Could not update rate");
+
+    // Success message
+    setMessage(`Rate updated for ${data.sitetype} to $${parsedRate.toFixed(2)}`);
+
+    // Update local state so the table shows the new rate
+    setSiteTypes(
+      siteTypes.map((s) =>
+        s.siteTypeId === siteTypeId ? { ...s, rate: parsedRate } : s
+      )
+    );
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setUpdatingId(null);
+  }
+};
+
 
   if (loading) return <Card><p>Loading site types...</p></Card>;
 
@@ -82,7 +107,7 @@ export function SiteRates() {
           {siteTypes.map((site) => (
             <tr key={site.siteTypeId}>
               <td>{site.name}</td>
-              <td>${site.rate.toFixed(2)}</td>
+              <td>${(site.rate || 0).toFixed(2)}</td>
               <td>
                 <RateInput
                   type="number"
@@ -101,6 +126,7 @@ export function SiteRates() {
     </Card>
   );
 }
+
 
 const SiteTable = styled.table`
   width: 100%;

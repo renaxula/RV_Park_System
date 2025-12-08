@@ -21,6 +21,7 @@ const {
   deleteReservation,
   getReservationById,
   getAllReservations,
+  getAllSiteTypes,
   // Holiday functions
   createHoliday,
   getAllHolidays,
@@ -500,6 +501,63 @@ app.get("/admin/users", requireRole("admin"), async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+app.get("/admin/site-types", async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const siteTypes = await getAllSiteTypes();
+    res.json(siteTypes);
+  } catch (err) {
+    // This will show the real error in your terminal/console
+    console.error("Error fetching site types:", err);
+    res.status(500).json({ error: "Failed to fetch site types" });
+  }
+});
+
+app.post("/admin/change-site-rate", async (req, res) => {
+  // 1. Check if the user is logged in
+  if (!req.session.userId) return res.status(401).json({ error: "Unauthorized" });
+
+  const { sitetype, rate } = req.body; // frontend sends sitetype = siteTypeId
+
+  // 2. Validate input
+  if (!sitetype || rate === undefined) {
+    return res.status(400).json({ error: "Site type ID and rate are required" });
+  }
+
+  const parsedRate = parseFloat(rate);
+  if (isNaN(parsedRate) || parsedRate < 0) {
+    return res.status(400).json({ error: "Rate must be a non-negative number" });
+  }
+
+  try {
+    // 3. Update the rate in the database
+    const result = await pool.query(
+      `
+      UPDATE site_types
+      SET rate = $1
+      WHERE siteTypeId = $2
+      RETURNING sitetype, rate
+      `,
+      [parsedRate, sitetype]
+    );
+
+    // 4. Check if the site type exists
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Site type not found" });
+    }
+
+    // 5. Return the updated site type info
+    res.status(200).json({ sitetype: result.rows[0].sitetype, rate: result.rows[0].rate });
+  } catch (err) {
+    console.error("Error updating site rate:", err);
+    res.status(500).json({ error: "Failed to update site rate" });
+  }
+});
+
 
 // Update user role (admin only)
 app.put("/admin/users/:userId/role", requireRole("admin"), async (req, res) => {

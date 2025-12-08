@@ -1203,6 +1203,33 @@ async function getSiteRate(siteId) {
   return result.rows[0]?.rate || 0;
 }
 
+async function getAllSiteTypes() {
+  const result = await pool.query(`
+    SELECT siteTypeId, sitetype AS name, rate
+    FROM site_types
+    ORDER BY sitetype;
+  `);
+  return result.rows;
+}
+
+async function addSiteType(sitetype, rate) {
+  try {
+    const query = `
+      INSERT INTO site_types (sitetype, rate)
+      VALUES ($1, $2)
+      RETURNING siteTypeId, sitetype, rate;
+    `;
+    const values = [sitetype, rate];
+    const result = await pool.query(query, values);
+
+    return result.rows[0];
+  } catch (err) {
+    console.error("Error inserting new site type:", err);
+    throw err;
+  }
+}
+
+
 module.exports = {
   pool,
   findUserByEmail,
@@ -1220,6 +1247,8 @@ module.exports = {
   deleteReservation,
   getReservationById,
   getAllReservations,
+  getAllSiteTypes,
+  addSiteType,
   // Holiday functions
   createHoliday,
   getAllHolidays,
