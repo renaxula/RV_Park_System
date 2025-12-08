@@ -35,6 +35,11 @@ export function UserInfo() {
                 <StyledButton>Manage Users</StyledButton>
               </Link>
             )}
+            {isAdmin && (
+              <Link to="/manage-holidays">
+                <StyledButton>Manage Holidays</StyledButton>
+              </Link>
+            )}
           </Buttons>
         </Info>
       </Layout>

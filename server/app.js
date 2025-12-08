@@ -20,7 +20,20 @@ const {
   updateReservation,
   deleteReservation,
   getReservationById,
-  getAllReservations
+  getAllReservations,
+  // Holiday functions
+  createHoliday,
+  getAllHolidays,
+  getHolidayById,
+  updateHoliday,
+  deleteHoliday,
+  checkDateOverlapsHoliday,
+  // Payment functions
+  createPayment,
+  getPaymentByReservation,
+  getPaymentsByUser,
+  processRefund,
+  getSiteRate,
 } = require("./db.js");
 
 const app = express();
@@ -542,6 +555,302 @@ app.get("/available-spots", async (req, res) => {
   } catch (err) {
     console.error("Error fetching available spots:", err);
     res.status(500).json({ error: "Failed to fetch available spots" });
+  }
+});
+
+// ==================== HOLIDAY ENDPOINTS ====================
+
+// Get all holidays (public)
+app.get("/api/holidays", async (req, res) => {
+  try {
+    const holidays = await getAllHolidays();
+    res.json(holidays);
+  } catch (err) {
+    console.error("Error fetching holidays:", err);
+    res.status(500).json({ error: "Failed to fetch holidays" });
+  }
+});
+
+// Create holiday (admin only)
+app.post("/api/holidays", requireRole("admin"), async (req, res) => {
+  const { name, startDate, endDate, description } = req.body;
+  
+  if (!name || !startDate || !endDate) {
+    return res.status(400).json({ error: "Name, start date, and end date are required" });
+  }
+
+  try {
+    const holiday = await createHoliday({ name, startDate, endDate, description });
+    res.status(201).json({ message: "Holiday created", holiday });
+  } catch (err) {
+    console.error("Error creating holiday:", err);
+    res.status(500).json({ error: "Failed to create holiday" });
+  }
+});
+
+// Update holiday (admin only)
+app.put("/api/holidays/:id", requireRole("admin"), async (req, res) => {
+  const holidayId = parseInt(req.params.id);
+  const { name, startDate, endDate, description } = req.body;
+
+  try {
+    const holiday = await updateHoliday(holidayId, { name, startDate, endDate, description });
+    if (!holiday) {
+      return res.status(404).json({ error: "Holiday not found" });
+    }
+    res.json({ message: "Holiday updated", holiday });
+  } catch (err) {
+    console.error("Error updating holiday:", err);
+    res.status(500).json({ error: "Failed to update holiday" });
+  }
+});
+
+// Delete holiday (admin only)
+app.delete("/api/holidays/:id", requireRole("admin"), async (req, res) => {
+  const holidayId = parseInt(req.params.id);
+
+  try {
+    const holiday = await deleteHoliday(holidayId);
+    if (!holiday) {
+      return res.status(404).json({ error: "Holiday not found" });
+    }
+    res.json({ message: "Holiday deleted", holiday });
+  } catch (err) {
+    console.error("Error deleting holiday:", err);
+    res.status(500).json({ error: "Failed to delete holiday" });
+  }
+});
+
+// Check if dates overlap with holidays
+app.get("/api/holidays/check", async (req, res) => {
+  const { startDate, endDate } = req.query;
+  
+  if (!startDate || !endDate) {
+    return res.status(400).json({ error: "Start and end dates required" });
+  }
+
+  try {
+    const overlappingHolidays = await checkDateOverlapsHoliday(startDate, endDate);
+    res.json({ 
+      isHoliday: overlappingHolidays.length > 0,
+      holidays: overlappingHolidays 
+    });
+  } catch (err) {
+    console.error("Error checking holidays:", err);
+    res.status(500).json({ error: "Failed to check holidays" });
+  }
+});
+
+// ==================== PAYMENT ENDPOINTS ====================
+
+// Calculate reservation cost
+app.get("/api/calculate-cost", async (req, res) => {
+  const { siteId, startDate, endDate } = req.query;
+
+  if (!siteId || !startDate || !endDate) {
+    return res.status(400).json({ error: "siteId, startDate, and endDate are required" });
+  }
+
+  try {
+    const rate = await getSiteRate(parseInt(siteId));
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    const totalCost = rate * nights;
+
+    res.json({ 
+      rate: parseFloat(rate), 
+      nights, 
+      totalCost,
+      breakdown: `$${rate}/night × ${nights} nights = $${totalCost.toFixed(2)}`
+    });
+  } catch (err) {
+    console.error("Error calculating cost:", err);
+    res.status(500).json({ error: "Failed to calculate cost" });
+  }
+});
+
+// Process payment for reservation
+app.post("/api/payments", requireAuth, async (req, res) => {
+  const { reservationId, amount, cardNumber, cardExpiry, cardCvv, cardName } = req.body;
+
+  if (!reservationId || !amount || !cardNumber) {
+    return res.status(400).json({ error: "Reservation ID, amount, and card details required" });
+  }
+
+  // Validate card number format (mock validation)
+  const cleanCardNumber = cardNumber.replace(/\s/g, '');
+  if (cleanCardNumber.length < 13 || cleanCardNumber.length > 19) {
+    return res.status(400).json({ error: "Invalid card number" });
+  }
+
+  try {
+    const cardLastFour = cleanCardNumber.slice(-4);
+    
+    const payment = await createPayment({
+      reservationId: parseInt(reservationId),
+      userId: req.session.userId,
+      amount: parseFloat(amount),
+      paymentType: 'credit_card',
+      cardLastFour
+    });
+
+    res.status(201).json({ 
+      message: "Payment processed successfully", 
+      payment,
+      receipt: {
+        paymentId: payment.paymentid,
+        amount: payment.amount,
+        cardLastFour: payment.cardlastfour,
+        transactionDate: payment.transactiondate,
+        status: 'completed'
+      }
+    });
+  } catch (err) {
+    console.error("Error processing payment:", err);
+    res.status(500).json({ error: "Failed to process payment" });
+  }
+});
+
+// Get payment for a reservation
+app.get("/api/payments/reservation/:reservationId", requireAuth, async (req, res) => {
+  const reservationId = parseInt(req.params.reservationId);
+
+  try {
+    const payment = await getPaymentByReservation(reservationId);
+    res.json(payment || null);
+  } catch (err) {
+    console.error("Error fetching payment:", err);
+    res.status(500).json({ error: "Failed to fetch payment" });
+  }
+});
+
+// Get user's payment history
+app.get("/api/payments/user", requireAuth, async (req, res) => {
+  try {
+    const payments = await getPaymentsByUser(req.session.userId);
+    res.json(payments);
+  } catch (err) {
+    console.error("Error fetching payments:", err);
+    res.status(500).json({ error: "Failed to fetch payments" });
+  }
+});
+
+// Calculate cancellation fee
+function calculateCancellationFee(startDate, dailyRate, isHoliday) {
+  const start = new Date(startDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const daysUntilArrival = Math.ceil((start - today) / (1000 * 60 * 60 * 24));
+  
+  // Holiday or special event: 1 day fee
+  if (isHoliday) {
+    return {
+      fee: parseFloat(dailyRate),
+      reason: "Holiday/special event cancellation fee (1 day rate)",
+      daysUntilArrival
+    };
+  }
+  
+  // 3+ days before arrival: $10 fee
+  if (daysUntilArrival >= 3) {
+    return {
+      fee: 10.00,
+      reason: "Cancellation fee (3+ days before arrival)",
+      daysUntilArrival
+    };
+  }
+  
+  // Less than 3 days: 1 day fee
+  return {
+    fee: parseFloat(dailyRate),
+    reason: "Late cancellation fee (less than 3 days before arrival)",
+    daysUntilArrival
+  };
+}
+
+// Get cancellation fee preview
+app.get("/api/cancellation-fee/:reservationId", requireAuth, async (req, res) => {
+  const reservationId = parseInt(req.params.reservationId);
+
+  try {
+    const reservation = await getReservationById(reservationId);
+    if (!reservation) {
+      return res.status(404).json({ error: "Reservation not found" });
+    }
+
+    const rate = await getSiteRate(reservation.siteid);
+    const holidays = await checkDateOverlapsHoliday(reservation.startdate, reservation.enddate);
+    const isHoliday = holidays.length > 0;
+
+    const feeInfo = calculateCancellationFee(reservation.startdate, rate, isHoliday);
+    
+    // Calculate refund amount
+    const payment = await getPaymentByReservation(reservationId);
+    const paidAmount = payment ? parseFloat(payment.amount) : 0;
+    const refundAmount = Math.max(0, paidAmount - feeInfo.fee);
+
+    res.json({
+      ...feeInfo,
+      isHoliday,
+      holidayNames: holidays.map(h => h.name),
+      paidAmount,
+      refundAmount,
+      dailyRate: parseFloat(rate)
+    });
+  } catch (err) {
+    console.error("Error calculating cancellation fee:", err);
+    res.status(500).json({ error: "Failed to calculate cancellation fee" });
+  }
+});
+
+// Process refund on cancellation
+app.post("/api/refund/:reservationId", requireAuth, async (req, res) => {
+  const reservationId = parseInt(req.params.reservationId);
+
+  try {
+    const reservation = await getReservationById(reservationId);
+    if (!reservation) {
+      return res.status(404).json({ error: "Reservation not found" });
+    }
+
+    // Check authorization
+    const isOwner = reservation.userid === req.session.userId;
+    const isStaff = req.session.role === 'employee' || req.session.role === 'admin';
+    if (!isOwner && !isStaff) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    const payment = await getPaymentByReservation(reservationId);
+    if (!payment) {
+      return res.json({ message: "No payment found for this reservation", refundAmount: 0 });
+    }
+
+    const rate = await getSiteRate(reservation.siteid);
+    const holidays = await checkDateOverlapsHoliday(reservation.startdate, reservation.enddate);
+    const isHoliday = holidays.length > 0;
+
+    const feeInfo = calculateCancellationFee(reservation.startdate, rate, isHoliday);
+    const refundAmount = Math.max(0, parseFloat(payment.amount) - feeInfo.fee);
+
+    const refundedPayment = await processRefund(
+      payment.paymentid, 
+      refundAmount, 
+      feeInfo.reason
+    );
+
+    res.json({
+      message: "Refund processed",
+      originalAmount: parseFloat(payment.amount),
+      cancellationFee: feeInfo.fee,
+      refundAmount,
+      reason: feeInfo.reason,
+      payment: refundedPayment
+    });
+  } catch (err) {
+    console.error("Error processing refund:", err);
+    res.status(500).json({ error: "Failed to process refund" });
   }
 });
 

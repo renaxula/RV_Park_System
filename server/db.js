@@ -159,6 +159,38 @@ async function createTables() {
     );
   `);
   console.log(`Table 'reservations' created in '${dbName}' database.`);
+
+  // Holidays/Special Events table for admin-defined dates
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS holidays (
+      holidayId SERIAL PRIMARY KEY,
+      name VARCHAR(256) NOT NULL,
+      startDate Date NOT NULL,
+      endDate Date NOT NULL,
+      description VARCHAR(512)
+    );
+  `);
+  console.log(`Table 'holidays' created in '${dbName}' database.`);
+
+  // Payments table for tracking transactions
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS payments (
+      paymentId SERIAL PRIMARY KEY,
+      reservationId INT NOT NULL,
+      userId INT NOT NULL,
+      amount DECIMAL(10, 2) NOT NULL,
+      paymentType VARCHAR(64) NOT NULL,
+      paymentStatus VARCHAR(64) NOT NULL DEFAULT 'completed',
+      cardLastFour VARCHAR(4),
+      transactionDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      refundAmount DECIMAL(10, 2) DEFAULT 0,
+      refundDate TIMESTAMP,
+      refundReason VARCHAR(256),
+      FOREIGN KEY (reservationId) REFERENCES reservations(reservationId) ON DELETE CASCADE,
+      FOREIGN KEY (userId) REFERENCES users(userId)
+    );
+  `);
+  console.log(`Table 'payments' created in '${dbName}' database.`);
 }
 
 async function loadDemoData() {
@@ -692,6 +724,48 @@ async function loadDemoData() {
       console.log(`Dummy reservation '${res.notes}' inserted`);
     }
 
+    // Sample holidays
+    const holidays = [
+      {
+        name: "Memorial Day Weekend",
+        startDate: "2025-05-24",
+        endDate: "2025-05-26",
+        description: "Federal holiday - expect high occupancy"
+      },
+      {
+        name: "Independence Day",
+        startDate: "2025-07-04",
+        endDate: "2025-07-06",
+        description: "4th of July weekend celebration"
+      },
+      {
+        name: "Labor Day Weekend",
+        startDate: "2025-08-30",
+        endDate: "2025-09-01",
+        description: "End of summer holiday weekend"
+      },
+      {
+        name: "Thanksgiving Week",
+        startDate: "2025-11-26",
+        endDate: "2025-11-30",
+        description: "Thanksgiving holiday period"
+      },
+      {
+        name: "Christmas & New Year",
+        startDate: "2025-12-24",
+        endDate: "2026-01-02",
+        description: "Winter holiday season"
+      }
+    ];
+
+    for (const h of holidays) {
+      await pool.query(`
+        INSERT INTO holidays (name, startDate, endDate, description)
+        VALUES ($1, $2, $3, $4);
+      `, [h.name, h.startDate, h.endDate, h.description]);
+      console.log(`Holiday '${h.name}' inserted`);
+    }
+
     console.log("Database initialization complete!");
   } catch (err) {
     console.error("Error initializing database:", err);
@@ -935,7 +1009,7 @@ async function getReservationById(reservationId) {
 
 async function getAllReservations() {
   const query = `
-    SELECT r.*, st.sitetype, s.sitename, u.emailAddress as email, u.firstname, u.lastname
+    SELECT r.*, st.sitetype, s.sitename, st.rate, u.emailAddress as email, u.firstname, u.lastname
     FROM reservations r
     JOIN sites s ON r.siteid = s.siteid 
     JOIN site_types st ON st.sitetypeid = s.sitetypeid
@@ -945,6 +1019,116 @@ async function getAllReservations() {
 
   const result = await pool.query(query);
   return result.rows;
+}
+
+// ==================== HOLIDAY FUNCTIONS ====================
+
+async function createHoliday({ name, startDate, endDate, description }) {
+  const query = `
+    INSERT INTO holidays (name, startDate, endDate, description)
+    VALUES ($1, $2, $3, $4)
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [name, startDate, endDate, description || '']);
+  return result.rows[0];
+}
+
+async function getAllHolidays() {
+  const query = `SELECT * FROM holidays ORDER BY startDate;`;
+  const result = await pool.query(query);
+  return result.rows;
+}
+
+async function getHolidayById(holidayId) {
+  const query = `SELECT * FROM holidays WHERE holidayId = $1;`;
+  const result = await pool.query(query, [holidayId]);
+  return result.rows[0];
+}
+
+async function updateHoliday(holidayId, { name, startDate, endDate, description }) {
+  const query = `
+    UPDATE holidays 
+    SET name = COALESCE($1, name),
+        startDate = COALESCE($2, startDate),
+        endDate = COALESCE($3, endDate),
+        description = COALESCE($4, description)
+    WHERE holidayId = $5
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [name, startDate, endDate, description, holidayId]);
+  return result.rows[0];
+}
+
+async function deleteHoliday(holidayId) {
+  const query = `DELETE FROM holidays WHERE holidayId = $1 RETURNING *;`;
+  const result = await pool.query(query, [holidayId]);
+  return result.rows[0];
+}
+
+async function checkDateOverlapsHoliday(startDate, endDate) {
+  const query = `
+    SELECT * FROM holidays 
+    WHERE startDate <= $2::date AND endDate >= $1::date;
+  `;
+  const result = await pool.query(query, [startDate, endDate]);
+  return result.rows;
+}
+
+// ==================== PAYMENT FUNCTIONS ====================
+
+async function createPayment({ reservationId, userId, amount, paymentType, cardLastFour }) {
+  const query = `
+    INSERT INTO payments (reservationId, userId, amount, paymentType, cardLastFour, paymentStatus)
+    VALUES ($1, $2, $3, $4, $5, 'completed')
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [reservationId, userId, amount, paymentType, cardLastFour]);
+  return result.rows[0];
+}
+
+async function getPaymentByReservation(reservationId) {
+  const query = `SELECT * FROM payments WHERE reservationId = $1;`;
+  const result = await pool.query(query, [reservationId]);
+  return result.rows[0];
+}
+
+async function getPaymentsByUser(userId) {
+  const query = `
+    SELECT p.*, r.startDate, r.endDate, s.siteName, st.siteType
+    FROM payments p
+    JOIN reservations r ON p.reservationId = r.reservationId
+    JOIN sites s ON r.siteId = s.siteId
+    JOIN site_types st ON s.siteTypeId = st.siteTypeId
+    WHERE p.userId = $1
+    ORDER BY p.transactionDate DESC;
+  `;
+  const result = await pool.query(query, [userId]);
+  return result.rows;
+}
+
+async function processRefund(paymentId, refundAmount, refundReason) {
+  const query = `
+    UPDATE payments 
+    SET refundAmount = $2,
+        refundDate = CURRENT_TIMESTAMP,
+        refundReason = $3,
+        paymentStatus = CASE WHEN $2 >= amount THEN 'refunded' ELSE 'partial_refund' END
+    WHERE paymentId = $1
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [paymentId, refundAmount, refundReason]);
+  return result.rows[0];
+}
+
+async function getSiteRate(siteId) {
+  const query = `
+    SELECT st.rate 
+    FROM sites s 
+    JOIN site_types st ON s.siteTypeId = st.siteTypeId 
+    WHERE s.siteId = $1;
+  `;
+  const result = await pool.query(query, [siteId]);
+  return result.rows[0]?.rate || 0;
 }
 
 module.exports = {
@@ -964,4 +1148,17 @@ module.exports = {
   deleteReservation,
   getReservationById,
   getAllReservations,
+  // Holiday functions
+  createHoliday,
+  getAllHolidays,
+  getHolidayById,
+  updateHoliday,
+  deleteHoliday,
+  checkDateOverlapsHoliday,
+  // Payment functions
+  createPayment,
+  getPaymentByReservation,
+  getPaymentsByUser,
+  processRefund,
+  getSiteRate,
 };

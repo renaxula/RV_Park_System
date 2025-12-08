@@ -17,6 +17,8 @@ import { Register } from "../pages/Register";
 import { ResetPassword } from "../pages/ResetPassword";
 import { ViewReservations } from "../pages/ViewReservations";
 import { EmployeeDash } from "../pages/EmployeeDash";
+import { PaymentPage } from "../pages/PaymentPage";
+import { ManageHolidays } from "../pages/ManageHolidays";
 
 export const routesConfig = [
   {
@@ -130,6 +132,20 @@ export const routesConfig = [
     requiredRole: "admin",
     Component: ChangeRates,
     showInNav: true,
+  },
+  {
+    path: "/manage-holidays",
+    label: "Manage Holidays",
+    requiredRole: "admin",
+    Component: ManageHolidays,
+    showInNav: true,
+  },
+  {
+    path: "/payment",
+    label: "Payment",
+    requiredRole: "customer",
+    Component: PaymentPage,
+    showInNav: false,
   },
   {
     path: "/customer-dash",
