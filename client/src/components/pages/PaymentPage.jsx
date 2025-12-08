@@ -9,9 +9,9 @@ import { useAuth } from "../router/AuthContext";
 export function PaymentPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { homePage } = useAuth();
+  const { homePage, user, isPendingAccount } = useAuth();
   
-  const { reservation, costDetails, spotDetails, isHoliday, holidayNames } = location.state || {};
+  const { reservation, costDetails, spotDetails, isHoliday, holidayNames, isGuestCheckout } = location.state || {};
   
   const [form, setForm] = useState({
     cardNumber: "",
@@ -104,7 +104,24 @@ export function PaymentPage() {
   }
 
   if (showReceipt && receiptData) {
-    return <Receipt data={receiptData} onClose={() => navigate(homePage)} />;
+    // If guest checkout, redirect to complete registration
+    const handleReceiptClose = () => {
+      if (isGuestCheckout || isPendingAccount) {
+        navigate('/complete-registration', { 
+          state: { receiptData } 
+        });
+      } else {
+        navigate(homePage);
+      }
+    };
+    
+    return (
+      <Receipt 
+        data={receiptData} 
+        onClose={handleReceiptClose}
+        isGuestCheckout={isGuestCheckout || isPendingAccount}
+      />
+    );
   }
 
   return (
@@ -217,7 +234,7 @@ export function PaymentPage() {
 }
 
 // Receipt Component
-function Receipt({ data, onClose }) {
+function Receipt({ data, onClose, isGuestCheckout }) {
   const formatDate = (dateStr) => {
     return new Date(dateStr).toLocaleDateString("en-US", {
       weekday: "long",
@@ -297,14 +314,29 @@ function Receipt({ data, onClose }) {
       </ReceiptBody>
 
       <ReceiptFooter>
-        <ReceiptNote>
-          A copy of this receipt has been saved to your account.
-          <br />
-          Please save or print this page for your records.
-        </ReceiptNote>
-        <StyledButton $emphasize onClick={onClose}>
-          Done
-        </StyledButton>
+        {isGuestCheckout ? (
+          <>
+            <GuestNotice>
+              <strong>One more step!</strong>
+              <br />
+              Set a password to access your account and manage your reservation.
+            </GuestNotice>
+            <StyledButton $emphasize onClick={onClose}>
+              Complete Account Setup
+            </StyledButton>
+          </>
+        ) : (
+          <>
+            <ReceiptNote>
+              A copy of this receipt has been saved to your account.
+              <br />
+              Please save or print this page for your records.
+            </ReceiptNote>
+            <StyledButton $emphasize onClick={onClose}>
+              Done
+            </StyledButton>
+          </>
+        )}
       </ReceiptFooter>
     </ReceiptCard>
   );
@@ -577,6 +609,17 @@ const ReceiptNote = styled.p`
   margin: 0 0 16px 0;
   font-size: 0.825rem;
   color: #94a3b8;
+  line-height: 1.5;
+`;
+
+const GuestNotice = styled.div`
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border: 1px solid #3b82f6;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  color: #1e40af;
+  font-size: 0.9rem;
   line-height: 1.5;
 `;
 

@@ -34,6 +34,10 @@ const {
   getPaymentsByUser,
   processRefund,
   getSiteRate,
+  // Guest checkout functions
+  createGuestUser,
+  completeGuestRegistration,
+  findUserByEmailWithStatus,
 } = require("./db.js");
 
 const app = express();
@@ -155,6 +159,7 @@ function establishSession(req, user) {
       req.session.userId = user.userid;
       req.session.role = user.role;
       req.session.email = user.emailaddress;
+      req.session.accountStatus = user.accountstatus || user.accountStatus || 'complete';
       req.session.save((saveErr) => {
         if (saveErr) return reject(saveErr);
         resolve();
@@ -181,14 +186,41 @@ app.post("/auth/register", async (req, res) => {
   }
 
   try {
-    const existingEmail = await findUserByEmail(email);
+    const existingEmail = await findUserByEmailWithStatus(email);
+    
+    // If a pending account exists with this email, complete registration instead
+    if (existingEmail && existingEmail.accountstatus === 'pending') {
+      const completedUser = await completeGuestRegistration(existingEmail.userid, {
+        password,
+        affiliation,
+        status
+      });
+      
+      await establishSession(req, {
+        userid: completedUser.userid || completedUser.userId,
+        emailaddress: completedUser.emailaddress || completedUser.emailAddress,
+        role: completedUser.role,
+        accountStatus: 'complete'
+      });
+
+      return res.status(201).json({
+        message: "Account completed and logged in",
+        user: {
+          userId: completedUser.userid || completedUser.userId,
+          email: completedUser.emailaddress || completedUser.emailAddress,
+          role: completedUser.role,
+          accountStatus: 'complete',
+        },
+      });
+    }
+    
     if (existingEmail)
       return res.status(409).json({ error: "Email already in use" });
 
     const newUser = await createUser({ email, password, firstName, lastName, phone, affiliation, status });
 
     console.log("new User:", newUser);
-    await establishSession(req, newUser);
+    await establishSession(req, { ...newUser, accountStatus: 'complete' });
 
     res.status(201).json({
       message: "Registered and logged in",
@@ -196,6 +228,7 @@ app.post("/auth/register", async (req, res) => {
         userId: newUser.userid,
         email: newUser.emailaddress,
         role: newUser.role,
+        accountStatus: 'complete',
       },
     });
   } catch (err) {
@@ -213,8 +246,17 @@ app.post("/auth/login", async (req, res) => {
   }
 
   try {
-    const user = await findUserByEmail(email);
+    const user = await findUserByEmailWithStatus(email);
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
+
+    // Check if account is pending (guest checkout not completed)
+    if (user.accountstatus === 'pending') {
+      return res.status(403).json({ 
+        error: "Please complete your account registration first",
+        pendingAccount: true,
+        userId: user.userid
+      });
+    }
 
     const validPassword = await bcrypt.compare(
       password + user.salt,
@@ -231,6 +273,7 @@ app.post("/auth/login", async (req, res) => {
         userId: user.userid,
         email: user.emailaddress,
         role: user.role,
+        accountStatus: user.accountstatus,
       },
     });
   } catch (err) {
@@ -248,6 +291,7 @@ app.get("/auth/me", (req, res) => {
       userId: req.session.userId,
       email: req.session.email,
       role: req.session.role,
+      accountStatus: req.session.accountStatus || 'complete',
     },
   });
 });
@@ -261,6 +305,118 @@ app.post("/auth/logout", (req, res) => {
     res.clearCookie("rvp.sid");
     res.json({ message: "Logged out" });
   });
+});
+
+// Guest checkout: start a reservation without full account
+app.post("/auth/guest-start", async (req, res) => {
+  const { email, firstName, lastName, phone } = req.body || {};
+  
+  if (!email || !firstName || !lastName || !phone) {
+    return res.status(400).json({ error: "Email, first name, last name, and phone are required" });
+  }
+
+  try {
+    // Check if email already exists
+    const existingUser = await findUserByEmailWithStatus(email);
+    
+    if (existingUser) {
+      // If account is complete, prompt to login
+      if (existingUser.accountstatus === 'complete') {
+        return res.status(409).json({ 
+          error: "An account with this email already exists. Please login instead.",
+          existingAccount: true
+        });
+      }
+      
+      // If account is pending, reuse it (resume guest session)
+      await establishSession(req, {
+        userid: existingUser.userid,
+        emailaddress: existingUser.emailaddress,
+        role: existingUser.role,
+        accountStatus: existingUser.accountstatus
+      });
+      
+      return res.json({
+        message: "Resumed guest session",
+        user: {
+          userId: existingUser.userid,
+          email: existingUser.emailaddress,
+          role: existingUser.role,
+          accountStatus: existingUser.accountstatus,
+        },
+      });
+    }
+
+    // Create new pending user
+    const newUser = await createGuestUser({ email, firstName, lastName, phone });
+    
+    await establishSession(req, {
+      userid: newUser.userid || newUser.userId,
+      emailaddress: newUser.emailaddress || newUser.emailAddress,
+      role: newUser.role,
+      accountStatus: 'pending'
+    });
+
+    res.status(201).json({
+      message: "Guest session created",
+      user: {
+        userId: newUser.userid || newUser.userId,
+        email: newUser.emailaddress || newUser.emailAddress,
+        role: newUser.role,
+        accountStatus: 'pending',
+      },
+    });
+  } catch (err) {
+    console.error("Error creating guest session:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Complete guest registration by setting password
+app.post("/auth/complete-registration", requireAuth, async (req, res) => {
+  const { password, affiliation, status } = req.body || {};
+  
+  if (!password) {
+    return res.status(400).json({ error: "Password is required" });
+  }
+  
+  if (password.length < 8) {
+    return res.status(400).json({ error: "Password must be at least 8 characters" });
+  }
+
+  if (!affiliation || !status) {
+    return res.status(400).json({ error: "Affiliation and status are required" });
+  }
+
+  try {
+    const updatedUser = await completeGuestRegistration(req.session.userId, {
+      password,
+      affiliation,
+      status
+    });
+
+    // Update session to reflect complete status
+    req.session.accountStatus = 'complete';
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    res.json({
+      message: "Account registration completed",
+      user: {
+        userId: updatedUser.userid || updatedUser.userId,
+        email: updatedUser.emailaddress || updatedUser.emailAddress,
+        role: updatedUser.role,
+        accountStatus: 'complete',
+      },
+    });
+  } catch (err) {
+    console.error("Error completing registration:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 app.post("/auth/password", requireAuth, async (req, res) => {

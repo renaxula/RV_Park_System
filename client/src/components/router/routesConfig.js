@@ -19,6 +19,8 @@ import { ViewReservations } from "../pages/ViewReservations";
 import { EmployeeDash } from "../pages/EmployeeDash";
 import { PaymentPage } from "../pages/PaymentPage";
 import { ManageHolidays } from "../pages/ManageHolidays";
+import { GuestReservation } from "../pages/GuestReservation";
+import { CompleteRegistration } from "../pages/CompleteRegistration";
 
 export const routesConfig = [
   {
@@ -83,6 +85,20 @@ export const routesConfig = [
     requiredRole: null,
     Component: Register,
     showInNav: true,
+  },
+  {
+    path: "/guest-reservation",
+    label: "Reserve Now",
+    requiredRole: null,
+    Component: GuestReservation,
+    showInNav: true,
+  },
+  {
+    path: "/complete-registration",
+    label: "Complete Registration",
+    requiredRole: null, // Allow pending users
+    Component: CompleteRegistration,
+    showInNav: false,
   },
   {
     path: "/reset-password",

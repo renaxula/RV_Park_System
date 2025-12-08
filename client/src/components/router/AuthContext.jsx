@@ -65,6 +65,33 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  // Refresh user data (useful after completing registration)
+  const refreshUser = useCallback(async () => {
+    await fetchMe();
+  }, [fetchMe]);
+
+  // Start guest session for reserve-first flow
+  const startGuestSession = useCallback(
+    async (guestInfo) => {
+      setError(null);
+      const { data } = await api.post("/auth/guest-start", guestInfo);
+      await fetchMe();
+      return data;
+    },
+    [fetchMe]
+  );
+
+  // Complete guest registration
+  const completeRegistration = useCallback(
+    async (registrationData) => {
+      setError(null);
+      const { data } = await api.post("/auth/complete-registration", registrationData);
+      await fetchMe();
+      return data;
+    },
+    [fetchMe]
+  );
+
   const value = useMemo(() => {
     const hasRole = (requiredRole = "customer") => {
       if (!user) return false;
@@ -72,6 +99,10 @@ export function AuthProvider({ children }) {
       const levels = { customer: 0, employee: 1, admin: 2 };
       return levels[user.role] >= levels[requiredRole];
     };
+    
+    // Check if user has pending (incomplete) account
+    const isPendingAccount = user?.accountStatus === 'pending';
+    
     return {
       user,
       loading,
@@ -81,7 +112,11 @@ export function AuthProvider({ children }) {
       register,
       logout,
       hasRole,
+      refreshUser,
+      startGuestSession,
+      completeRegistration,
       isAuthenticated: !!user,
+      isPendingAccount,
       homePage:
           user?.role === "customer"
           ? "/customer-dash"
@@ -91,7 +126,7 @@ export function AuthProvider({ children }) {
           ? "/employee-dash"
           : "/customer-dash"
     };
-  }, [error, loading, logout, register, user, login]);
+  }, [error, loading, logout, register, user, login, refreshUser, startGuestSession, completeRegistration]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
