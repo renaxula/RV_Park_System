@@ -102,12 +102,13 @@ async function createTables() {
       firstName VARCHAR(128) NOT NULL,
       lastName VARCHAR(128) NOT NULL,
       phone VARCHAR(256) NOT NULL,
-      affiliation VARCHAR(128) NOT NULL,
-      status VARCHAR(128) NOT NULL,
+      affiliation VARCHAR(128) NOT NULL DEFAULT '',
+      status VARCHAR(128) NOT NULL DEFAULT '',
       lastReservation Date,
       roleId INT NOT NULL,
-      passwordHash VARCHAR(256) NOT NULL,
-      salt VARCHAR(256) NOT NULL,
+      passwordHash VARCHAR(256),
+      salt VARCHAR(256),
+      accountStatus VARCHAR(32) NOT NULL DEFAULT 'complete',
       FOREIGN KEY (roleId) REFERENCES user_roles(roleId)
     );
   `);
@@ -709,8 +710,8 @@ async function loadDemoData() {
     for (const u of users) {
       const passwordHash = await bcrypt.hash(u.password + u.salt, 12);
       await pool.query(`
-        INSERT INTO users (emailAddress, firstName, lastName, phone, affiliation, status, roleId, passwordHash, salt)
-        VALUES ('${u.emailAddress}', '${u.firstName}', '${u.lastName}', '${u.phone}', '${u.affiliation}', '${u.status}', ${u.roleId}, '${passwordHash}', '${u.salt}' );
+        INSERT INTO users (emailAddress, firstName, lastName, phone, affiliation, status, roleId, passwordHash, salt, accountStatus)
+        VALUES ('${u.emailAddress}', '${u.firstName}', '${u.lastName}', '${u.phone}', '${u.affiliation}', '${u.status}', ${u.roleId}, '${passwordHash}', '${u.salt}', 'complete' );
       `);
       console.log(`Dummy user '${u.firstName}' inserted`);
     }
@@ -911,6 +912,77 @@ async function updateUserPassword(userId, passwordHash) {
     passwordHash,
     userId,
   ]);
+}
+
+// Create a guest/pending user with minimal info (no password yet)
+async function createGuestUser({ email, firstName, lastName, phone }) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedFirstName = firstName.trim().toLowerCase();
+  const normalizedLastName = lastName.trim().toLowerCase();
+
+  const result = await pool.query(
+    `INSERT INTO users (
+      emailAddress,
+      firstName,
+      lastName,
+      phone,
+      affiliation,
+      status,
+      passwordHash,
+      roleId,
+      salt,
+      accountStatus
+    )
+    VALUES ($1, $2, $3, $4, '', '', '', (SELECT DISTINCT roleId FROM user_roles WHERE role = 'customer'), '', 'pending')
+    RETURNING userId, emailAddress`,
+    [normalizedEmail, normalizedFirstName, normalizedLastName, phone]
+  );
+  
+  return {
+    ...result.rows[0],
+    role: 'customer',
+    accountStatus: 'pending'
+  };
+}
+
+// Complete a pending guest account by setting password and additional info
+async function completeGuestRegistration(userId, { password, affiliation, status }) {
+  const salt = await bcrypt.genSalt(12);
+  const passwordHash = await bcrypt.hash(password + salt, 12);
+  const normalizedAffiliation = affiliation?.trim().toLowerCase() || '';
+  const normalizedStatus = status?.trim().toLowerCase() || '';
+
+  const result = await pool.query(
+    `UPDATE users 
+     SET passwordHash = $1, 
+         salt = $2, 
+         affiliation = $3, 
+         status = $4, 
+         accountStatus = 'complete'
+     WHERE userId = $5
+     RETURNING userId, emailAddress`,
+    [passwordHash, salt, normalizedAffiliation, normalizedStatus, userId]
+  );
+  
+  return {
+    ...result.rows[0],
+    role: 'customer',
+    accountStatus: 'complete'
+  };
+}
+
+// Find user by email including account status
+async function findUserByEmailWithStatus(email) {
+  const normalized = email?.trim().toLowerCase();
+  if (!normalized) return null;
+  const result = await pool.query(
+    `SELECT userId, emailAddress, passwordHash, ur.role, salt, accountStatus
+    FROM users u JOIN
+    user_roles ur ON ur.roleid = u.roleid
+    WHERE emailAddress = $1`,
+    [normalized]
+  );
+  return result.rows[0] || null;
 }
 
 async function getAllUsers() {
@@ -1161,4 +1233,8 @@ module.exports = {
   getPaymentsByUser,
   processRefund,
   getSiteRate,
+  // Guest checkout functions
+  createGuestUser,
+  completeGuestRegistration,
+  findUserByEmailWithStatus,
 };

@@ -85,6 +85,10 @@ export function Login() {
           </StyledButton>
         </LoginButtonContainer>
         <p>No account? <StyledLink to="/register">Register</StyledLink></p>
+        <Divider>or</Divider>
+        <GuestLink to="/guest-reservation">
+          Reserve without an account →
+        </GuestLink>
       </Form>
     </LoginCard>
     <MapAndRules/>
@@ -151,4 +155,42 @@ const LoginButtonContainer = styled.div`
   margin: auto;
   width: 100%;
   text-align: center;
+`;
+
+const Divider = styled.div`
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  position: relative;
+  
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: #e2e8f0;
+  }
+  
+  &::before {
+    left: 0;
+  }
+  
+  &::after {
+    right: 0;
+  }
+`;
+
+const GuestLink = styled(Link)`
+  display: block;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+  text-decoration: none;
+  
+  &:hover {
+    color: #4077d1ff;
+    text-decoration: underline;
+  }
 `;
