@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Card } from "../ui/Card";
 import { useAuth } from "../router/AuthContext";
 import styled from "styled-components";
 import { StyledButton } from "../ui/StyledButton";
+import { Card } from "../ui/Card";
 
 export function Register() {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ export function Register() {
     firstName: "",
     lastName: "",
     phone: "",
-    affiliation: "",
+    affiliation: "DOD Authorized Civilian", // default
     status: "",
   });
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -31,15 +31,18 @@ export function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (form.password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
+
     setSubmitting(true);
     setError(null);
+
     try {
       await register(form);
-      navigate(homePage ?? '/customer-dash');
+      navigate(homePage ?? "/customer-dash");
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Registration failed");
@@ -49,9 +52,15 @@ export function Register() {
   };
 
   const handleChange = (field) => (e) => {
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
-  };
+    const value = e.target.value;
 
+    // Clear status if affiliation is DOD Authorized Civilian
+    if (field === "affiliation" && value === "DOD Authorized Civilian") {
+      setForm((prev) => ({ ...prev, affiliation: value, status: "" }));
+    } else {
+      setForm((prev) => ({ ...prev, [field]: value }));
+    }
+  };
 
   return (
     <RegisterCard>
@@ -66,6 +75,7 @@ export function Register() {
             required
           />
         </Label>
+
         <Label>
           First Name
           <Input
@@ -75,6 +85,7 @@ export function Register() {
             required
           />
         </Label>
+
         <Label>
           Last Name
           <Input
@@ -84,6 +95,7 @@ export function Register() {
             required
           />
         </Label>
+
         <Label>
           Phone Number
           <Input
@@ -93,6 +105,7 @@ export function Register() {
             required
           />
         </Label>
+
         <Label>
           Affiliation
           <Select
@@ -100,33 +113,34 @@ export function Register() {
             onChange={handleChange("affiliation")}
             required
           >
-            <option value="">Select Affiliation</option>
+            <option value="DOD Authorized Civilian">DOD Authorized Civilian</option>
             <option value="Air Force">Air Force</option>
             <option value="Navy">Navy</option>
             <option value="Army">Army</option>
             <option value="Marines">Marines</option>
             <option value="Coast Guard">Coast Guard</option>
-            <option value="DOD Authorized Civilian">
-              DOD Authorized Civilian
-            </option>
           </Select>
         </Label>
 
-        <Label>
-          Status
-          <Select
-            value={form.status}
-            onChange={handleChange("status")}
-            required
-          >
-            <option value="">Select Status</option>
-            <option value="Active Duty">Active Duty</option>
-            <option value="Retired">Retired</option>
-            <option value="Reservist">Reservist</option>
-            <option value="PCS In">PCS In</option>
-            <option value="PCS Out">PCS Out</option>
-          </Select>
-        </Label>
+        {/* Status only shows for non-Civilian */}
+        {form.affiliation !== "DOD Authorized Civilian" && (
+          <Label>
+            Status
+            <Select
+              value={form.status}
+              onChange={handleChange("status")}
+              required
+            >
+              <option value="">Select Status</option>
+              <option value="Active Duty">Active Duty</option>
+              <option value="Retired">Retired</option>
+              <option value="Reservist">Reservist</option>
+              <option value="PCS In">PCS In</option>
+              <option value="PCS Out">PCS Out</option>
+            </Select>
+          </Label>
+        )}
+
         <Label>
           Password (min 8 chars)
           <Input
@@ -137,6 +151,7 @@ export function Register() {
             required
           />
         </Label>
+
         <Label>
           Confirm Password
           <Input
@@ -147,12 +162,15 @@ export function Register() {
             required
           />
         </Label>
+
         {error && <p style={{ color: "red" }}>{error}</p>}
+
         <LoginButtonContainer>
           <StyledButton type="submit" disabled={submitting}>
             {submitting ? "Creating account..." : "Register"}
           </StyledButton>
         </LoginButtonContainer>
+
         <p>
           Already have an account? <StyledLink to="/login">Login</StyledLink>
         </p>

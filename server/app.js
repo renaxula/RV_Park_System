@@ -169,15 +169,18 @@ app.get("/", (req, res) => {
 
 app.post("/auth/register", async (req, res) => {
   const { email, password, firstName, lastName, phone, affiliation, status } = req.body || {};
-  if (!email || !password || !firstName || !lastName || !phone || !affiliation || !status) {
-    return res
-      .status(400)
-      .json({ error: "Required fields are missing" });
+
+  if (!email || !password || !firstName || !lastName || !phone || !affiliation) {
+    return res.status(400).json({ error: "Required fields are missing" });
   }
+
+  // Status is required only if not Civilian
+  if (affiliation !== "DOD Authorized Civilian" && !status) {
+    return res.status(400).json({ error: "Required fields are missing" });
+  }
+
   if (password.length < 8) {
-    return res
-      .status(400)
-      .json({ error: "Password must be at least 8 characters" });
+    return res.status(400).json({ error: "Password must be at least 8 characters" });
   }
 
   try {
