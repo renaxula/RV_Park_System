@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { StyledButton } from "../ui/StyledButton";
 import { useAuth } from "../router/AuthContext";
+import { RegisterForm } from "../cards/RegisterForm";
 
 /*
   Filter down spots based on RV size
@@ -91,14 +92,14 @@ export function MakeReservation() {
 
   function updateField(e) {
     const { name, value } = e.target;
-    
+
     // If start date is changed, auto-populate end date to 1 week later
-    if (name === "startDate" && value) {
+    if (name === "startDate" && value && form.endDate == "") {
       const startDate = new Date(value);
       const endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + 7);
       const endDateStr = endDate.toISOString().split("T")[0];
-      
+
       setForm({ ...form, startDate: value, endDate: endDateStr });
     } else {
       setForm({ ...form, [name]: value });
@@ -114,13 +115,16 @@ export function MakeReservation() {
 
     async function fetchCost() {
       try {
-        const res = await axios.get("http://localhost:3000/api/calculate-cost", {
-          params: {
-            siteId: form.spot,
-            startDate: form.startDate,
-            endDate: form.endDate,
-          },
-        });
+        const res = await axios.get(
+          "http://localhost:3000/api/calculate-cost",
+          {
+            params: {
+              siteId: form.spot,
+              startDate: form.startDate,
+              endDate: form.endDate,
+            },
+          }
+        );
         setCostPreview(res.data);
       } catch (err) {
         console.error("Error calculating cost:", err);
@@ -139,12 +143,15 @@ export function MakeReservation() {
 
     async function checkHolidays() {
       try {
-        const res = await axios.get("http://localhost:3000/api/holidays/check", {
-          params: {
-            startDate: form.startDate,
-            endDate: form.endDate,
-          },
-        });
+        const res = await axios.get(
+          "http://localhost:3000/api/holidays/check",
+          {
+            params: {
+              startDate: form.startDate,
+              endDate: form.endDate,
+            },
+          }
+        );
         if (res.data.isHoliday) {
           setHolidayWarning(res.data.holidays);
         } else {
@@ -189,6 +196,7 @@ export function MakeReservation() {
       alert("You must be logged in to make a reservation");
       return;
     }
+    console.log(form.userId);
 
     if (!form.spot) {
       alert("Please select an available spot");
@@ -217,10 +225,12 @@ export function MakeReservation() {
 
     try {
       const res = await axios.post("http://localhost:3000/reservations", body);
-      
+
       // Get the selected spot details for the payment page
-      const selectedSpot = availableSpots.find(s => s.siteid === parseInt(form.spot));
-      
+      const selectedSpot = availableSpots.find(
+        (s) => s.siteid === parseInt(form.spot)
+      );
+
       // Navigate to payment page with reservation details
       navigate("/payment", {
         state: {
@@ -228,7 +238,7 @@ export function MakeReservation() {
           costDetails: costPreview,
           spotDetails: selectedSpot,
           isHoliday: holidayWarning !== null,
-          holidayNames: holidayWarning?.map(h => h.name) || [],
+          holidayNames: holidayWarning?.map((h) => h.name) || [],
         },
       });
     } catch (err) {
@@ -261,6 +271,10 @@ export function MakeReservation() {
     }
   };
 
+  const updateUsersList = (newEmail) => {
+    fetchUsers();
+  };
+
   return (
     <Card>
       <Form onSubmit={handleSubmit}>
@@ -275,13 +289,13 @@ export function MakeReservation() {
                 name="userId"
                 onChange={updateField}
               >
-                <option value="" disabled selected>
+                <option value="" selected disabled>
                   -- Select User --
                 </option>
                 <option value="new">New User</option>
                 {usersList.map((u) => {
                   return (
-                    <option key={u.userId} value={u.userId}>
+                    <option key={u.userid} value={u.userid}>
                       {u.emailaddress} - {u.lastname}, {u.firstname}
                     </option>
                   );
@@ -346,8 +360,8 @@ export function MakeReservation() {
           <HolidayWarning>
             <WarningIcon>⚠️</WarningIcon>
             <WarningText>
-              <strong>Holiday/Special Event Notice:</strong> Your reservation overlaps with{" "}
-              {holidayWarning.map(h => h.name).join(", ")}. 
+              <strong>Holiday/Special Event Notice:</strong> Your reservation
+              overlaps with {holidayWarning.map((h) => h.name).join(", ")}.
               Cancellation policy: 1-day fee applies regardless of timing.
             </WarningText>
           </HolidayWarning>
@@ -359,7 +373,9 @@ export function MakeReservation() {
             <CostBreakdown>
               <CostRow>
                 <CostLabel>Nightly Rate:</CostLabel>
-                <CostValue>${parseFloat(costPreview.rate).toFixed(2)}</CostValue>
+                <CostValue>
+                  ${parseFloat(costPreview.rate).toFixed(2)}
+                </CostValue>
               </CostRow>
               <CostRow>
                 <CostLabel>Number of Nights:</CostLabel>
@@ -368,7 +384,9 @@ export function MakeReservation() {
               <CostDivider />
               <CostRow $total>
                 <CostLabel>Total Cost:</CostLabel>
-                <CostValue>${parseFloat(costPreview.totalCost).toFixed(2)}</CostValue>
+                <CostValue>
+                  ${parseFloat(costPreview.totalCost).toFixed(2)}
+                </CostValue>
               </CostRow>
             </CostBreakdown>
           </CostPreview>
@@ -380,6 +398,7 @@ export function MakeReservation() {
           </StyledButton>
         </Actions>
       </Form>
+      {form.userId == "new" && <RegisterForm onRegister={updateUsersList} />}
     </Card>
   );
 }

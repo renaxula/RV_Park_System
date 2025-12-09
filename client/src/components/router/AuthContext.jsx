@@ -54,7 +54,9 @@ export function AuthProvider({ children }) {
     async (payload) => {
       setError(null);
       await api.post("/auth/register", payload);
-      await fetchMe();
+      if (!payload.employeeAction) {
+        await fetchMe();
+      }
     },
     [fetchMe]
   );
@@ -85,7 +87,10 @@ export function AuthProvider({ children }) {
   const completeRegistration = useCallback(
     async (registrationData) => {
       setError(null);
-      const { data } = await api.post("/auth/complete-registration", registrationData);
+      const { data } = await api.post(
+        "/auth/complete-registration",
+        registrationData
+      );
       await fetchMe();
       return data;
     },
@@ -99,10 +104,10 @@ export function AuthProvider({ children }) {
       const levels = { customer: 0, employee: 1, admin: 2 };
       return levels[user.role] >= levels[requiredRole];
     };
-    
+
     // Check if user has pending (incomplete) account
-    const isPendingAccount = user?.accountStatus === 'pending';
-    
+    const isPendingAccount = user?.accountStatus === "pending";
+
     return {
       user,
       loading,
@@ -118,15 +123,25 @@ export function AuthProvider({ children }) {
       isAuthenticated: !!user,
       isPendingAccount,
       homePage:
-          user?.role === "customer"
+        user?.role === "customer"
           ? "/customer-dash"
           : user?.role === "admin"
           ? "/admin-dash"
           : user?.role === "employee"
           ? "/employee-dash"
-          : "/customer-dash"
+          : "/customer-dash",
     };
-  }, [error, loading, logout, register, user, login, refreshUser, startGuestSession, completeRegistration]);
+  }, [
+    error,
+    loading,
+    logout,
+    register,
+    user,
+    login,
+    refreshUser,
+    startGuestSession,
+    completeRegistration,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

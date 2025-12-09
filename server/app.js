@@ -118,7 +118,10 @@ function validateReservationDates(startDate, endDate) {
   const sixMonthsFromNow = new Date(today);
   sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
   if (start > sixMonthsFromNow) {
-    return { valid: false, error: "Reservations can only be made up to 6 months in advance" };
+    return {
+      valid: false,
+      error: "Reservations can only be made up to 6 months in advance",
+    };
   }
 
   // Calculate duration in days
@@ -144,9 +147,10 @@ function validateReservationDates(startDate, endDate) {
 
   // If reservation touches peak season, limit to 14 days
   if (touchesPeakSeason && durationDays > 14) {
-    return { 
-      valid: false, 
-      error: "Reservations during peak season (April - October) are limited to 14 days" 
+    return {
+      valid: false,
+      error:
+        "Reservations during peak season (April - October) are limited to 14 days",
     };
   }
 
@@ -160,7 +164,8 @@ function establishSession(req, user) {
       req.session.userId = user.userid;
       req.session.role = user.role;
       req.session.email = user.emailaddress;
-      req.session.accountStatus = user.accountstatus || user.accountStatus || 'complete';
+      req.session.accountStatus =
+        user.accountstatus || user.accountStatus || "complete";
       req.session.save((saveErr) => {
         if (saveErr) return reject(saveErr);
         resolve();
@@ -174,9 +179,17 @@ app.get("/", (req, res) => {
 });
 
 app.post("/auth/register", async (req, res) => {
-  const { email, password, firstName, lastName, phone, affiliation, status } = req.body || {};
+  const { email, password, firstName, lastName, phone, affiliation, status } =
+    req.body || {};
 
-  if (!email || !password || !firstName || !lastName || !phone || !affiliation) {
+  if (
+    !email ||
+    !password ||
+    !firstName ||
+    !lastName ||
+    !phone ||
+    !affiliation
+  ) {
     return res.status(400).json({ error: "Required fields are missing" });
   }
 
@@ -186,25 +199,30 @@ app.post("/auth/register", async (req, res) => {
   }
 
   if (password.length < 8) {
-    return res.status(400).json({ error: "Password must be at least 8 characters" });
+    return res
+      .status(400)
+      .json({ error: "Password must be at least 8 characters" });
   }
 
   try {
     const existingEmail = await findUserByEmailWithStatus(email);
-    
+
     // If a pending account exists with this email, complete registration instead
-    if (existingEmail && existingEmail.accountstatus === 'pending') {
-      const completedUser = await completeGuestRegistration(existingEmail.userid, {
-        password,
-        affiliation,
-        status
-      });
-      
+    if (existingEmail && existingEmail.accountstatus === "pending") {
+      const completedUser = await completeGuestRegistration(
+        existingEmail.userid,
+        {
+          password,
+          affiliation,
+          status,
+        }
+      );
+
       await establishSession(req, {
         userid: completedUser.userid || completedUser.userId,
         emailaddress: completedUser.emailaddress || completedUser.emailAddress,
         role: completedUser.role,
-        accountStatus: 'complete'
+        accountStatus: "complete",
       });
 
       return res.status(201).json({
@@ -213,18 +231,29 @@ app.post("/auth/register", async (req, res) => {
           userId: completedUser.userid || completedUser.userId,
           email: completedUser.emailaddress || completedUser.emailAddress,
           role: completedUser.role,
-          accountStatus: 'complete',
+          accountStatus: "complete",
         },
       });
     }
-    
+
     if (existingEmail)
       return res.status(409).json({ error: "Email already in use" });
 
-    const newUser = await createUser({ email, password, firstName, lastName, phone, affiliation, status });
+    const newUser = await createUser({
+      email,
+      password,
+      firstName,
+      lastName,
+      phone,
+      affiliation,
+      status,
+    });
 
     console.log("new User:", newUser);
-    await establishSession(req, { ...newUser, accountStatus: 'complete' });
+
+    //catch employees/admins creating account for customer
+    if (!req.session.userId)
+      await establishSession(req, { ...newUser, accountStatus: "complete" });
 
     res.status(201).json({
       message: "Registered and logged in",
@@ -232,7 +261,7 @@ app.post("/auth/register", async (req, res) => {
         userId: newUser.userid,
         email: newUser.emailaddress,
         role: newUser.role,
-        accountStatus: 'complete',
+        accountStatus: "complete",
       },
     });
   } catch (err) {
@@ -244,9 +273,7 @@ app.post("/auth/register", async (req, res) => {
 app.post("/auth/login", async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
-    return res
-      .status(400)
-      .json({ error: "Email and password are required" });
+    return res.status(400).json({ error: "Email and password are required" });
   }
 
   try {
@@ -254,11 +281,11 @@ app.post("/auth/login", async (req, res) => {
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
     // Check if account is pending (guest checkout not completed)
-    if (user.accountstatus === 'pending') {
-      return res.status(403).json({ 
+    if (user.accountstatus === "pending") {
+      return res.status(403).json({
         error: "Please complete your account registration first",
         pendingAccount: true,
-        userId: user.userid
+        userId: user.userid,
       });
     }
 
@@ -295,7 +322,7 @@ app.get("/auth/me", (req, res) => {
       userId: req.session.userId,
       email: req.session.email,
       role: req.session.role,
-      accountStatus: req.session.accountStatus || 'complete',
+      accountStatus: req.session.accountStatus || "complete",
     },
   });
 });
@@ -314,32 +341,35 @@ app.post("/auth/logout", (req, res) => {
 // Guest checkout: start a reservation without full account
 app.post("/auth/guest-start", async (req, res) => {
   const { email, firstName, lastName, phone } = req.body || {};
-  
+
   if (!email || !firstName || !lastName || !phone) {
-    return res.status(400).json({ error: "Email, first name, last name, and phone are required" });
+    return res
+      .status(400)
+      .json({ error: "Email, first name, last name, and phone are required" });
   }
 
   try {
     // Check if email already exists
     const existingUser = await findUserByEmailWithStatus(email);
-    
+
     if (existingUser) {
       // If account is complete, prompt to login
-      if (existingUser.accountstatus === 'complete') {
-        return res.status(409).json({ 
-          error: "An account with this email already exists. Please login instead.",
-          existingAccount: true
+      if (existingUser.accountstatus === "complete") {
+        return res.status(409).json({
+          error:
+            "An account with this email already exists. Please login instead.",
+          existingAccount: true,
         });
       }
-      
+
       // If account is pending, reuse it (resume guest session)
       await establishSession(req, {
         userid: existingUser.userid,
         emailaddress: existingUser.emailaddress,
         role: existingUser.role,
-        accountStatus: existingUser.accountstatus
+        accountStatus: existingUser.accountstatus,
       });
-      
+
       return res.json({
         message: "Resumed guest session",
         user: {
@@ -352,13 +382,18 @@ app.post("/auth/guest-start", async (req, res) => {
     }
 
     // Create new pending user
-    const newUser = await createGuestUser({ email, firstName, lastName, phone });
-    
+    const newUser = await createGuestUser({
+      email,
+      firstName,
+      lastName,
+      phone,
+    });
+
     await establishSession(req, {
       userid: newUser.userid || newUser.userId,
       emailaddress: newUser.emailaddress || newUser.emailAddress,
       role: newUser.role,
-      accountStatus: 'pending'
+      accountStatus: "pending",
     });
 
     res.status(201).json({
@@ -367,7 +402,7 @@ app.post("/auth/guest-start", async (req, res) => {
         userId: newUser.userid || newUser.userId,
         email: newUser.emailaddress || newUser.emailAddress,
         role: newUser.role,
-        accountStatus: 'pending',
+        accountStatus: "pending",
       },
     });
   } catch (err) {
@@ -379,28 +414,32 @@ app.post("/auth/guest-start", async (req, res) => {
 // Complete guest registration by setting password
 app.post("/auth/complete-registration", requireAuth, async (req, res) => {
   const { password, affiliation, status } = req.body || {};
-  
+
   if (!password) {
     return res.status(400).json({ error: "Password is required" });
   }
-  
+
   if (password.length < 8) {
-    return res.status(400).json({ error: "Password must be at least 8 characters" });
+    return res
+      .status(400)
+      .json({ error: "Password must be at least 8 characters" });
   }
 
   if (!affiliation || !status) {
-    return res.status(400).json({ error: "Affiliation and status are required" });
+    return res
+      .status(400)
+      .json({ error: "Affiliation and status are required" });
   }
 
   try {
     const updatedUser = await completeGuestRegistration(req.session.userId, {
       password,
       affiliation,
-      status
+      status,
     });
 
     // Update session to reflect complete status
-    req.session.accountStatus = 'complete';
+    req.session.accountStatus = "complete";
     await new Promise((resolve, reject) => {
       req.session.save((err) => {
         if (err) reject(err);
@@ -414,7 +453,7 @@ app.post("/auth/complete-registration", requireAuth, async (req, res) => {
         userId: updatedUser.userid || updatedUser.userId,
         email: updatedUser.emailaddress || updatedUser.emailAddress,
         role: updatedUser.role,
-        accountStatus: 'complete',
+        accountStatus: "complete",
       },
     });
   } catch (err) {
@@ -491,8 +530,8 @@ app.post("/admin/reset-password", requireRole("admin"), async (req, res) => {
   }
 });
 
-// Get all users (admin only)
-app.get("/admin/users", requireRole("admin"), async (req, res) => {
+// Get all users (admin only) // requireRole("admin"),
+app.get("/admin/users", async (req, res) => {
   try {
     const users = await getAllUsers();
     res.json(users);
@@ -519,18 +558,23 @@ app.get("/admin/site-types", async (req, res) => {
 
 app.post("/admin/change-site-rate", async (req, res) => {
   // 1. Check if the user is logged in
-  if (!req.session.userId) return res.status(401).json({ error: "Unauthorized" });
+  if (!req.session.userId)
+    return res.status(401).json({ error: "Unauthorized" });
 
   const { sitetype, rate } = req.body; // frontend sends sitetype = siteTypeId
 
   // 2. Validate input
   if (!sitetype || rate === undefined) {
-    return res.status(400).json({ error: "Site type ID and rate are required" });
+    return res
+      .status(400)
+      .json({ error: "Site type ID and rate are required" });
   }
 
   const parsedRate = parseFloat(rate);
   if (isNaN(parsedRate) || parsedRate < 0) {
-    return res.status(400).json({ error: "Rate must be a non-negative number" });
+    return res
+      .status(400)
+      .json({ error: "Rate must be a non-negative number" });
   }
 
   try {
@@ -551,13 +595,14 @@ app.post("/admin/change-site-rate", async (req, res) => {
     }
 
     // 5. Return the updated site type info
-    res.status(200).json({ sitetype: result.rows[0].sitetype, rate: result.rows[0].rate });
+    res
+      .status(200)
+      .json({ sitetype: result.rows[0].sitetype, rate: result.rows[0].rate });
   } catch (err) {
     console.error("Error updating site rate:", err);
     res.status(500).json({ error: "Failed to update site rate" });
   }
 });
-
 
 // Update user role (admin only)
 app.put("/admin/users/:userId/role", requireRole("admin"), async (req, res) => {
@@ -565,7 +610,9 @@ app.put("/admin/users/:userId/role", requireRole("admin"), async (req, res) => {
   const { role } = req.body || {};
 
   if (!role || !["customer", "employee", "admin"].includes(role)) {
-    return res.status(400).json({ error: "Valid role is required (customer, employee, admin)" });
+    return res
+      .status(400)
+      .json({ error: "Valid role is required (customer, employee, admin)" });
   }
 
   // Prevent admin from demoting themselves
@@ -579,14 +626,17 @@ app.put("/admin/users/:userId/role", requireRole("admin"), async (req, res) => {
       return res.status(400).json({ error: "Invalid role" });
     }
 
-    const updatedUser = await updateUserRole(parseInt(userId), roleRecord.roleid);
+    const updatedUser = await updateUserRole(
+      parseInt(userId),
+      roleRecord.roleid
+    );
     if (!updatedUser) {
       return res.status(404).json({ error: "User not found" });
     }
 
     res.json({
       message: "Role updated successfully",
-      user: { ...updatedUser, role }
+      user: { ...updatedUser, role },
     });
   } catch (err) {
     console.error("Error updating user role:", err);
@@ -649,8 +699,7 @@ app.get("/api/occupied", async (req, res) => {
   }
 });
 
-
-app.post('/reservations', async (req, res) => {
+app.post("/reservations", async (req, res) => {
   try {
     const { startDate, endDate } = req.body;
 
@@ -663,7 +712,7 @@ app.post('/reservations', async (req, res) => {
     const reservation = await createReservation(req.body);
     res.status(201).json({
       message: "Reservation created",
-      reservation
+      reservation,
     });
   } catch (err) {
     console.error("Error creating reservation:", err);
@@ -674,7 +723,7 @@ app.post('/reservations', async (req, res) => {
 // Get all reservations (employee/admin only)
 app.get("/reservations", requireAuth, async (req, res) => {
   // Check if user is employee or admin
-  if (req.session.role !== 'employee' && req.session.role !== 'admin') {
+  if (req.session.role !== "employee" && req.session.role !== "admin") {
     return res.status(403).json({ error: "Forbidden - staff only" });
   }
 
@@ -686,7 +735,6 @@ app.get("/reservations", requireAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch reservations" });
   }
 });
-
 
 app.get("/reservations/:userId", async (req, res) => {
   const userId = parseInt(req.params.userId);
@@ -713,10 +761,13 @@ app.put("/reservations/:id", requireAuth, async (req, res) => {
 
     // Allow if user owns it, or is employee/admin
     const isOwner = existing.userid === req.session.userId;
-    const isStaff = req.session.role === 'employee' || req.session.role === 'admin';
-    
+    const isStaff =
+      req.session.role === "employee" || req.session.role === "admin";
+
     if (!isOwner && !isStaff) {
-      return res.status(403).json({ error: "Not authorized to edit this reservation" });
+      return res
+        .status(403)
+        .json({ error: "Not authorized to edit this reservation" });
     }
 
     // Validate reservation dates
@@ -729,7 +780,7 @@ app.put("/reservations/:id", requireAuth, async (req, res) => {
       siteId: siteId ? parseInt(siteId) : null,
       startDate,
       endDate,
-      notes
+      notes,
     });
 
     res.json({ message: "Reservation updated", reservation: updated });
@@ -751,10 +802,13 @@ app.delete("/reservations/:id", requireAuth, async (req, res) => {
 
     // Allow if user owns it, or is employee/admin
     const isOwner = existing.userid === req.session.userId;
-    const isStaff = req.session.role === 'employee' || req.session.role === 'admin';
-    
+    const isStaff =
+      req.session.role === "employee" || req.session.role === "admin";
+
     if (!isOwner && !isStaff) {
-      return res.status(403).json({ error: "Not authorized to cancel this reservation" });
+      return res
+        .status(403)
+        .json({ error: "Not authorized to cancel this reservation" });
     }
 
     const deleted = await deleteReservation(reservationId);
@@ -791,13 +845,20 @@ app.get("/api/holidays", async (req, res) => {
 // Create holiday (admin only)
 app.post("/api/holidays", requireRole("admin"), async (req, res) => {
   const { name, startDate, endDate, description } = req.body;
-  
+
   if (!name || !startDate || !endDate) {
-    return res.status(400).json({ error: "Name, start date, and end date are required" });
+    return res
+      .status(400)
+      .json({ error: "Name, start date, and end date are required" });
   }
 
   try {
-    const holiday = await createHoliday({ name, startDate, endDate, description });
+    const holiday = await createHoliday({
+      name,
+      startDate,
+      endDate,
+      description,
+    });
     res.status(201).json({ message: "Holiday created", holiday });
   } catch (err) {
     console.error("Error creating holiday:", err);
@@ -811,7 +872,12 @@ app.put("/api/holidays/:id", requireRole("admin"), async (req, res) => {
   const { name, startDate, endDate, description } = req.body;
 
   try {
-    const holiday = await updateHoliday(holidayId, { name, startDate, endDate, description });
+    const holiday = await updateHoliday(holidayId, {
+      name,
+      startDate,
+      endDate,
+      description,
+    });
     if (!holiday) {
       return res.status(404).json({ error: "Holiday not found" });
     }
@@ -841,16 +907,19 @@ app.delete("/api/holidays/:id", requireRole("admin"), async (req, res) => {
 // Check if dates overlap with holidays
 app.get("/api/holidays/check", async (req, res) => {
   const { startDate, endDate } = req.query;
-  
+
   if (!startDate || !endDate) {
     return res.status(400).json({ error: "Start and end dates required" });
   }
 
   try {
-    const overlappingHolidays = await checkDateOverlapsHoliday(startDate, endDate);
-    res.json({ 
+    const overlappingHolidays = await checkDateOverlapsHoliday(
+      startDate,
+      endDate
+    );
+    res.json({
       isHoliday: overlappingHolidays.length > 0,
-      holidays: overlappingHolidays 
+      holidays: overlappingHolidays,
     });
   } catch (err) {
     console.error("Error checking holidays:", err);
@@ -865,7 +934,9 @@ app.get("/api/calculate-cost", async (req, res) => {
   const { siteId, startDate, endDate } = req.query;
 
   if (!siteId || !startDate || !endDate) {
-    return res.status(400).json({ error: "siteId, startDate, and endDate are required" });
+    return res
+      .status(400)
+      .json({ error: "siteId, startDate, and endDate are required" });
   }
 
   try {
@@ -875,11 +946,11 @@ app.get("/api/calculate-cost", async (req, res) => {
     const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
     const totalCost = rate * nights;
 
-    res.json({ 
-      rate: parseFloat(rate), 
-      nights, 
+    res.json({
+      rate: parseFloat(rate),
+      nights,
       totalCost,
-      breakdown: `$${rate}/night × ${nights} nights = $${totalCost.toFixed(2)}`
+      breakdown: `$${rate}/night × ${nights} nights = $${totalCost.toFixed(2)}`,
     });
   } catch (err) {
     console.error("Error calculating cost:", err);
@@ -889,39 +960,42 @@ app.get("/api/calculate-cost", async (req, res) => {
 
 // Process payment for reservation
 app.post("/api/payments", requireAuth, async (req, res) => {
-  const { reservationId, amount, cardNumber, cardExpiry, cardCvv, cardName } = req.body;
+  const { reservationId, amount, cardNumber, cardExpiry, cardCvv, cardName } =
+    req.body;
 
   if (!reservationId || !amount || !cardNumber) {
-    return res.status(400).json({ error: "Reservation ID, amount, and card details required" });
+    return res
+      .status(400)
+      .json({ error: "Reservation ID, amount, and card details required" });
   }
 
   // Validate card number format (mock validation)
-  const cleanCardNumber = cardNumber.replace(/\s/g, '');
+  const cleanCardNumber = cardNumber.replace(/\s/g, "");
   if (cleanCardNumber.length < 13 || cleanCardNumber.length > 19) {
     return res.status(400).json({ error: "Invalid card number" });
   }
 
   try {
     const cardLastFour = cleanCardNumber.slice(-4);
-    
+
     const payment = await createPayment({
       reservationId: parseInt(reservationId),
       userId: req.session.userId,
       amount: parseFloat(amount),
-      paymentType: 'credit_card',
-      cardLastFour
+      paymentType: "credit_card",
+      cardLastFour,
     });
 
-    res.status(201).json({ 
-      message: "Payment processed successfully", 
+    res.status(201).json({
+      message: "Payment processed successfully",
       payment,
       receipt: {
         paymentId: payment.paymentid,
         amount: payment.amount,
         cardLastFour: payment.cardlastfour,
         transactionDate: payment.transactiondate,
-        status: 'completed'
-      }
+        status: "completed",
+      },
     });
   } catch (err) {
     console.error("Error processing payment:", err);
@@ -930,17 +1004,21 @@ app.post("/api/payments", requireAuth, async (req, res) => {
 });
 
 // Get payment for a reservation
-app.get("/api/payments/reservation/:reservationId", requireAuth, async (req, res) => {
-  const reservationId = parseInt(req.params.reservationId);
+app.get(
+  "/api/payments/reservation/:reservationId",
+  requireAuth,
+  async (req, res) => {
+    const reservationId = parseInt(req.params.reservationId);
 
-  try {
-    const payment = await getPaymentByReservation(reservationId);
-    res.json(payment || null);
-  } catch (err) {
-    console.error("Error fetching payment:", err);
-    res.status(500).json({ error: "Failed to fetch payment" });
+    try {
+      const payment = await getPaymentByReservation(reservationId);
+      res.json(payment || null);
+    } catch (err) {
+      console.error("Error fetching payment:", err);
+      res.status(500).json({ error: "Failed to fetch payment" });
+    }
   }
-});
+);
 
 // Get user's payment history
 app.get("/api/payments/user", requireAuth, async (req, res) => {
@@ -958,69 +1036,80 @@ function calculateCancellationFee(startDate, dailyRate, isHoliday) {
   const start = new Date(startDate);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const daysUntilArrival = Math.ceil((start - today) / (1000 * 60 * 60 * 24));
-  
+
   // Holiday or special event: 1 day fee
   if (isHoliday) {
     return {
       fee: parseFloat(dailyRate),
       reason: "Holiday/special event cancellation fee (1 day rate)",
-      daysUntilArrival
+      daysUntilArrival,
     };
   }
-  
+
   // 3+ days before arrival: $10 fee
   if (daysUntilArrival >= 3) {
     return {
-      fee: 10.00,
+      fee: 10.0,
       reason: "Cancellation fee (3+ days before arrival)",
-      daysUntilArrival
+      daysUntilArrival,
     };
   }
-  
+
   // Less than 3 days: 1 day fee
   return {
     fee: parseFloat(dailyRate),
     reason: "Late cancellation fee (less than 3 days before arrival)",
-    daysUntilArrival
+    daysUntilArrival,
   };
 }
 
 // Get cancellation fee preview
-app.get("/api/cancellation-fee/:reservationId", requireAuth, async (req, res) => {
-  const reservationId = parseInt(req.params.reservationId);
+app.get(
+  "/api/cancellation-fee/:reservationId",
+  requireAuth,
+  async (req, res) => {
+    const reservationId = parseInt(req.params.reservationId);
 
-  try {
-    const reservation = await getReservationById(reservationId);
-    if (!reservation) {
-      return res.status(404).json({ error: "Reservation not found" });
+    try {
+      const reservation = await getReservationById(reservationId);
+      if (!reservation) {
+        return res.status(404).json({ error: "Reservation not found" });
+      }
+
+      const rate = await getSiteRate(reservation.siteid);
+      const holidays = await checkDateOverlapsHoliday(
+        reservation.startdate,
+        reservation.enddate
+      );
+      const isHoliday = holidays.length > 0;
+
+      const feeInfo = calculateCancellationFee(
+        reservation.startdate,
+        rate,
+        isHoliday
+      );
+
+      // Calculate refund amount
+      const payment = await getPaymentByReservation(reservationId);
+      const paidAmount = payment ? parseFloat(payment.amount) : 0;
+      const refundAmount = Math.max(0, paidAmount - feeInfo.fee);
+
+      res.json({
+        ...feeInfo,
+        isHoliday,
+        holidayNames: holidays.map((h) => h.name),
+        paidAmount,
+        refundAmount,
+        dailyRate: parseFloat(rate),
+      });
+    } catch (err) {
+      console.error("Error calculating cancellation fee:", err);
+      res.status(500).json({ error: "Failed to calculate cancellation fee" });
     }
-
-    const rate = await getSiteRate(reservation.siteid);
-    const holidays = await checkDateOverlapsHoliday(reservation.startdate, reservation.enddate);
-    const isHoliday = holidays.length > 0;
-
-    const feeInfo = calculateCancellationFee(reservation.startdate, rate, isHoliday);
-    
-    // Calculate refund amount
-    const payment = await getPaymentByReservation(reservationId);
-    const paidAmount = payment ? parseFloat(payment.amount) : 0;
-    const refundAmount = Math.max(0, paidAmount - feeInfo.fee);
-
-    res.json({
-      ...feeInfo,
-      isHoliday,
-      holidayNames: holidays.map(h => h.name),
-      paidAmount,
-      refundAmount,
-      dailyRate: parseFloat(rate)
-    });
-  } catch (err) {
-    console.error("Error calculating cancellation fee:", err);
-    res.status(500).json({ error: "Failed to calculate cancellation fee" });
   }
-});
+);
 
 // Process refund on cancellation
 app.post("/api/refund/:reservationId", requireAuth, async (req, res) => {
@@ -1034,26 +1123,37 @@ app.post("/api/refund/:reservationId", requireAuth, async (req, res) => {
 
     // Check authorization
     const isOwner = reservation.userid === req.session.userId;
-    const isStaff = req.session.role === 'employee' || req.session.role === 'admin';
+    const isStaff =
+      req.session.role === "employee" || req.session.role === "admin";
     if (!isOwner && !isStaff) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
     const payment = await getPaymentByReservation(reservationId);
     if (!payment) {
-      return res.json({ message: "No payment found for this reservation", refundAmount: 0 });
+      return res.json({
+        message: "No payment found for this reservation",
+        refundAmount: 0,
+      });
     }
 
     const rate = await getSiteRate(reservation.siteid);
-    const holidays = await checkDateOverlapsHoliday(reservation.startdate, reservation.enddate);
+    const holidays = await checkDateOverlapsHoliday(
+      reservation.startdate,
+      reservation.enddate
+    );
     const isHoliday = holidays.length > 0;
 
-    const feeInfo = calculateCancellationFee(reservation.startdate, rate, isHoliday);
+    const feeInfo = calculateCancellationFee(
+      reservation.startdate,
+      rate,
+      isHoliday
+    );
     const refundAmount = Math.max(0, parseFloat(payment.amount) - feeInfo.fee);
 
     const refundedPayment = await processRefund(
-      payment.paymentid, 
-      refundAmount, 
+      payment.paymentid,
+      refundAmount,
       feeInfo.reason
     );
 
@@ -1063,7 +1163,7 @@ app.post("/api/refund/:reservationId", requireAuth, async (req, res) => {
       cancellationFee: feeInfo.fee,
       refundAmount,
       reason: feeInfo.reason,
-      payment: refundedPayment
+      payment: refundedPayment,
     });
   } catch (err) {
     console.error("Error processing refund:", err);
