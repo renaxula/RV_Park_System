@@ -253,7 +253,7 @@ async function loadDemoData() {
       maxLength: 0,
     },
     {
-      siteType: "tent",
+      siteType: "Tent",
       rate: 17.0,
       maxLength: 0,
     },
@@ -263,7 +263,7 @@ async function loadDemoData() {
       maxLength: 0,
     },
     {
-      siteType: "extra Deep",
+      siteType: "Extended Lot",
       rate: 25.0,
       maxLength: 55,
     },
