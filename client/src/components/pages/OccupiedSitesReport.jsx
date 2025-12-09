@@ -11,9 +11,9 @@ export function OccupiedSitesReport(props) {
   const [reportData, setReportData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const updateFilterHandler = (event) => {
-    setDateSelect(document.getElementById("filter").value);
-  };
+  // const updateFilterHandler = (event) => {
+  //   setDateSelect(document.getElementById("filter").value);
+  // };
 
   const date = props.date ? props.date : "";
 

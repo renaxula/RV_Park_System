@@ -32,6 +32,7 @@ function CurrentAvailability({
           url: `http://localhost:3000/api/availableSites${dateFilter}`,
         },
         (data) => {
+          data.sort((a, b) => a.siteid - b.siteid);
           setRows(data);
           if (onDataLoad) onDataLoad(data);
         }

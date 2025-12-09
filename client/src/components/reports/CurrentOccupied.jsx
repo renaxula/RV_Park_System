@@ -22,6 +22,7 @@ const CurrentOccupied = ({
       fetchSites(
         { url: `http://localhost:3000/api/occupied${filter}` },
         (data) => {
+          data.sort((a, b) => a.siteid - b.siteid);
           setRows(data);
           if (onDataLoad) onDataLoad(data);
         }
@@ -37,7 +38,10 @@ const CurrentOccupied = ({
   // Filter out rows with daysleft == 0 first, then paginate
   const filteredRows = rows.filter((row) => row.daysleft != 0);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedRows = filteredRows.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedRows = filteredRows.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   return (
     <>

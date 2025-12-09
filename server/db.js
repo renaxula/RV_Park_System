@@ -611,7 +611,7 @@ async function loadDemoData() {
       siteId: 7,
       startDate: "2025-12-10",
       endDate: "2025-12-18",
-      notes: "dec 7-1",
+      notes: "dec 7-1: 12/10-12/18",
     },
     {
       userId: 2,
@@ -731,39 +731,42 @@ async function loadDemoData() {
         name: "Memorial Day Weekend",
         startDate: "2025-05-24",
         endDate: "2025-05-26",
-        description: "Federal holiday - expect high occupancy"
+        description: "Federal holiday - expect high occupancy",
       },
       {
         name: "Independence Day",
         startDate: "2025-07-04",
         endDate: "2025-07-06",
-        description: "4th of July weekend celebration"
+        description: "4th of July weekend celebration",
       },
       {
         name: "Labor Day Weekend",
         startDate: "2025-08-30",
         endDate: "2025-09-01",
-        description: "End of summer holiday weekend"
+        description: "End of summer holiday weekend",
       },
       {
         name: "Thanksgiving Week",
         startDate: "2025-11-26",
         endDate: "2025-11-30",
-        description: "Thanksgiving holiday period"
+        description: "Thanksgiving holiday period",
       },
       {
         name: "Christmas & New Year",
         startDate: "2025-12-24",
         endDate: "2026-01-02",
-        description: "Winter holiday season"
-      }
+        description: "Winter holiday season",
+      },
     ];
 
     for (const h of holidays) {
-      await pool.query(`
+      await pool.query(
+        `
         INSERT INTO holidays (name, startDate, endDate, description)
         VALUES ($1, $2, $3, $4);
-      `, [h.name, h.startDate, h.endDate, h.description]);
+      `,
+        [h.name, h.startDate, h.endDate, h.description]
+      );
       console.log(`Holiday '${h.name}' inserted`);
     }
 
@@ -937,20 +940,23 @@ async function createGuestUser({ email, firstName, lastName, phone }) {
     RETURNING userId, emailAddress`,
     [normalizedEmail, normalizedFirstName, normalizedLastName, phone]
   );
-  
+
   return {
     ...result.rows[0],
-    role: 'customer',
-    accountStatus: 'pending'
+    role: "customer",
+    accountStatus: "pending",
   };
 }
 
 // Complete a pending guest account by setting password and additional info
-async function completeGuestRegistration(userId, { password, affiliation, status }) {
+async function completeGuestRegistration(
+  userId,
+  { password, affiliation, status }
+) {
   const salt = await bcrypt.genSalt(12);
   const passwordHash = await bcrypt.hash(password + salt, 12);
-  const normalizedAffiliation = affiliation?.trim().toLowerCase() || '';
-  const normalizedStatus = status?.trim().toLowerCase() || '';
+  const normalizedAffiliation = affiliation?.trim().toLowerCase() || "";
+  const normalizedStatus = status?.trim().toLowerCase() || "";
 
   const result = await pool.query(
     `UPDATE users 
@@ -963,11 +969,11 @@ async function completeGuestRegistration(userId, { password, affiliation, status
      RETURNING userId, emailAddress`,
     [passwordHash, salt, normalizedAffiliation, normalizedStatus, userId]
   );
-  
+
   return {
     ...result.rows[0],
-    role: 'customer',
-    accountStatus: 'complete'
+    role: "customer",
+    accountStatus: "complete",
   };
 }
 
@@ -1101,7 +1107,12 @@ async function createHoliday({ name, startDate, endDate, description }) {
     VALUES ($1, $2, $3, $4)
     RETURNING *;
   `;
-  const result = await pool.query(query, [name, startDate, endDate, description || '']);
+  const result = await pool.query(query, [
+    name,
+    startDate,
+    endDate,
+    description || "",
+  ]);
   return result.rows[0];
 }
 
@@ -1117,7 +1128,10 @@ async function getHolidayById(holidayId) {
   return result.rows[0];
 }
 
-async function updateHoliday(holidayId, { name, startDate, endDate, description }) {
+async function updateHoliday(
+  holidayId,
+  { name, startDate, endDate, description }
+) {
   const query = `
     UPDATE holidays 
     SET name = COALESCE($1, name),
@@ -1127,7 +1141,13 @@ async function updateHoliday(holidayId, { name, startDate, endDate, description 
     WHERE holidayId = $5
     RETURNING *;
   `;
-  const result = await pool.query(query, [name, startDate, endDate, description, holidayId]);
+  const result = await pool.query(query, [
+    name,
+    startDate,
+    endDate,
+    description,
+    holidayId,
+  ]);
   return result.rows[0];
 }
 
@@ -1148,13 +1168,25 @@ async function checkDateOverlapsHoliday(startDate, endDate) {
 
 // ==================== PAYMENT FUNCTIONS ====================
 
-async function createPayment({ reservationId, userId, amount, paymentType, cardLastFour }) {
+async function createPayment({
+  reservationId,
+  userId,
+  amount,
+  paymentType,
+  cardLastFour,
+}) {
   const query = `
     INSERT INTO payments (reservationId, userId, amount, paymentType, cardLastFour, paymentStatus)
     VALUES ($1, $2, $3, $4, $5, 'completed')
     RETURNING *;
   `;
-  const result = await pool.query(query, [reservationId, userId, amount, paymentType, cardLastFour]);
+  const result = await pool.query(query, [
+    reservationId,
+    userId,
+    amount,
+    paymentType,
+    cardLastFour,
+  ]);
   return result.rows[0];
 }
 
@@ -1188,7 +1220,11 @@ async function processRefund(paymentId, refundAmount, refundReason) {
     WHERE paymentId = $1
     RETURNING *;
   `;
-  const result = await pool.query(query, [paymentId, refundAmount, refundReason]);
+  const result = await pool.query(query, [
+    paymentId,
+    refundAmount,
+    refundReason,
+  ]);
   return result.rows[0];
 }
 
@@ -1228,7 +1264,6 @@ async function addSiteType(sitetype, rate) {
     throw err;
   }
 }
-
 
 module.exports = {
   pool,
