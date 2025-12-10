@@ -99,6 +99,7 @@ export function MakeReservation() {
       .split("T")[0],
     spot: prefillSpot?.id || "",
     pets: false,
+    notes: "",
   });
 
   const [availableSpots, setAvailableSpots] = useState([]);
@@ -238,7 +239,7 @@ export function MakeReservation() {
       siteId: parseInt(form.spot),
       startDate: form.startDate,
       endDate: form.endDate,
-      notes: `RV: ${form.rvSize}`,
+      notes: `${form.notes} RV: ${form.rvSize}`,
     };
 
     try {
@@ -307,7 +308,7 @@ export function MakeReservation() {
       alert("Please select start and end dates");
       return;
     }
-    
+
     if (form.pets) {
       openPetConfirmModal();
     } else {
@@ -342,6 +343,20 @@ export function MakeReservation() {
                     );
                   })}
                 </SelectInput>
+              </Field>
+            ) : (
+              ""
+            )}
+
+            {user.role != "customer" ? (
+              <Field>
+                <Label>Notes</Label>
+                <TextInput
+                  value={form.notes}
+                  name="notes"
+                  onChange={updateField}
+                >
+                </TextInput>
               </Field>
             ) : (
               ""
@@ -456,7 +471,7 @@ export function MakeReservation() {
           )}
 
           <Actions>
-            <StyledButton $emphasize={true} type="submit">
+            <StyledButton disabled={error !== null} $emphasize={true} type="submit">
               Submit Reservation
             </StyledButton>
           </Actions>
