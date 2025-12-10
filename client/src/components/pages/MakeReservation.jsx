@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { StyledButton } from "../ui/StyledButton";
 import { useAuth } from "../router/AuthContext";
 import { RegisterForm } from "../cards/RegisterForm";
-
+import { PetConfirmModal } from "../ui/PetConfirmModal";
 /*
   Filter down spots based on RV size
   Filter so it shows the smallest avialable sites
@@ -17,8 +17,14 @@ import { RegisterForm } from "../cards/RegisterForm";
 
 // Validation: 14-day limit in peak season (April-October), 6 months advance max
 function validateReservationDates(startDate, endDate) {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  // Parse dates as local dates, not UTC
+  const [startYear, startMonth, startDay] = startDate.split("-").map(Number);
+  const [endYear, endMonth, endDay] = endDate.split("-").map(Number);
+
+
+
+  const start = new Date(startYear, startMonth - 1, startDay);
+  const end = new Date(endYear, endMonth - 1, endDay);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -28,6 +34,10 @@ function validateReservationDates(startDate, endDate) {
 
   if (end <= start) {
     return { valid: false, error: "End date must be after start date" };
+  }
+
+  if (start < today) {
+    return { valid: false, error: "Start date cannot be in the past" };
   }
 
   // Check 6 months advance booking limit
@@ -77,30 +87,44 @@ export function MakeReservation() {
   const { user, homepage } = useAuth();
   const navigate = useNavigate();
   const [usersList, setUsersList] = useState([]);
+  const [showPetModal, setShowPetModal] = useState(false);
+  const [petPolicyAgreed, setPetPolicyAgreed] = useState(false);
 
   const [form, setForm] = useState({
     userId: user.role != "customer" ? "" : user.userId,
     rvSize: prefillSpot?.type || "",
-    startDate: "",
-    endDate: "",
+    startDate: new Date().toISOString().split("T")[0],
+    endDate: new Date(new Date().setDate(new Date().getDate() + 7))
+      .toISOString()
+      .split("T")[0],
     spot: prefillSpot?.id || "",
+    pets: false,
   });
 
   const [availableSpots, setAvailableSpots] = useState([]);
   const [costPreview, setCostPreview] = useState(null);
   const [holidayWarning, setHolidayWarning] = useState(null);
+  const [error, setError] = useState(null);
 
   function updateField(e) {
     const { name, value } = e.target;
+    // If start date is changed, validate start and end date
+    if (name === "startDate" || name === "endDate") {
+      //move validation into here so that it gives immediate feedback
+      console.log("Validating dates:", form.startDate, form.endDate);
+      let validation;
+      validation =
+        name === "startDate"
+          ? validateReservationDates(value, form.endDate)
+          : validateReservationDates(form.startDate, value);
+      console.log("Validation result:", validation);
+      if (!validation.valid) {
+        setError(validation.error);
+        return;
+      }
 
-    // If start date is changed, auto-populate end date to 1 week later
-    if (name === "startDate" && value && form.endDate == "") {
-      const startDate = new Date(value);
-      const endDate = new Date(startDate);
-      endDate.setDate(endDate.getDate() + 7);
-      const endDateStr = endDate.toISOString().split("T")[0];
-
-      setForm({ ...form, startDate: value, endDate: endDateStr });
+      setError(null);
+      setForm({ ...form, [name]: value });
     } else {
       setForm({ ...form, [name]: value });
     }
@@ -189,32 +213,26 @@ export function MakeReservation() {
     fetchSpots();
   }, [form.startDate, form.endDate]);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  const openPetConfirmModal = () => {
+    setShowPetModal(true);
+  };
 
-    if (!user?.userId) {
-      alert("You must be logged in to make a reservation");
-      return;
-    }
-    console.log(form.userId);
+  const closePetConfirmModal = () => {
+    setShowPetModal(false);
+    setPetPolicyAgreed(false);
+  };
 
-    if (!form.spot) {
-      alert("Please select an available spot");
-      return;
-    }
-
-    if (!form.startDate || !form.endDate) {
-      alert("Please select start and end dates");
+  const handlePetPolicyConfirm = async () => {
+    if (!petPolicyAgreed) {
+      alert("You must agree to the pet policy to continue");
       return;
     }
 
-    // Validate reservation dates
-    const validation = validateReservationDates(form.startDate, form.endDate);
-    if (!validation.valid) {
-      alert(validation.error);
-      return;
-    }
+    closePetConfirmModal();
+    await submitReservation();
+  };
 
+  const submitReservation = async () => {
     const body = {
       userId: parseInt(form.userId),
       siteId: parseInt(form.spot),
@@ -226,12 +244,10 @@ export function MakeReservation() {
     try {
       const res = await axios.post("http://localhost:3000/reservations", body);
 
-      // Get the selected spot details for the payment page
       const selectedSpot = availableSpots.find(
         (s) => s.siteid === parseInt(form.spot)
       );
 
-      // Navigate to payment page with reservation details
       navigate("/payment", {
         state: {
           reservation: res.data.reservation,
@@ -245,8 +261,7 @@ export function MakeReservation() {
       console.error(err);
       alert("Error making reservation");
     }
-  }
-
+  };
   useEffect(() => {
     if (user.role == "admin" || user.role == "employee") {
       fetchUsers();
@@ -275,131 +290,189 @@ export function MakeReservation() {
     fetchUsers();
   };
 
-  return (
-    <Card>
-      <Form onSubmit={handleSubmit}>
-        <Title>Make a Reservation</Title>
+  async function handleSubmit(e) {
+    e.preventDefault();
 
-        <Grid>
-          {user.role != "customer" ? (
+    if (!user?.userId) {
+      alert("You must be logged in to make a reservation");
+      return;
+    }
+
+    if (!form.spot) {
+      alert("Please select an available spot");
+      return;
+    }
+
+    if (!form.startDate || !form.endDate) {
+      alert("Please select start and end dates");
+      return;
+    }
+    
+    if (form.pets) {
+      openPetConfirmModal();
+    } else {
+      await submitReservation();
+    }
+  }
+
+  return (
+    <>
+      <Card>
+        <Form onSubmit={handleSubmit}>
+          <Title>Make a Reservation</Title>
+
+          <Grid>
+            {user.role != "customer" ? (
+              <Field>
+                <Label>User</Label>
+                <SelectInput
+                  value={form.userId}
+                  name="userId"
+                  onChange={updateField}
+                >
+                  <option value="" selected disabled>
+                    -- Select User --
+                  </option>
+                  <option value="new">New User</option>
+                  {usersList.map((u) => {
+                    return (
+                      <option key={u.userid} value={u.userid}>
+                        {u.emailaddress} - {u.lastname}, {u.firstname}
+                      </option>
+                    );
+                  })}
+                </SelectInput>
+              </Field>
+            ) : (
+              ""
+            )}
+
             <Field>
-              <Label>User</Label>
-              <SelectInput
-                value={form.userId}
-                name="userId"
+              <Label>RV Size</Label>
+              <TextInput
+                name="rvSize"
+                value={form.rvSize}
                 onChange={updateField}
+              />
+            </Field>
+
+            <Field>
+              <Label>Start Date</Label>
+              <DateInput
+                name="startDate"
+                type="date"
+                value={form.startDate}
+                onChange={updateField}
+              />
+            </Field>
+
+            <Field>
+              <Label>End Date</Label>
+              <DateInput
+                name="endDate"
+                type="date"
+                value={form.endDate}
+                onChange={updateField}
+              />
+            </Field>
+
+            <Field>
+              <Label>Available Spot</Label>
+              <SelectInput
+                name="spot"
+                value={form.spot}
+                onChange={updateField}
+                disabled={!!prefillSpot}
               >
-                <option value="" selected disabled>
-                  -- Select User --
+                <option value="">
+                  {prefillSpot ? prefillSpot.name : "-- Select a spot --"}
                 </option>
-                <option value="new">New User</option>
-                {usersList.map((u) => {
-                  return (
-                    <option key={u.userid} value={u.userid}>
-                      {u.emailaddress} - {u.lastname}, {u.firstname}
-                    </option>
-                  );
-                })}
+
+                {availableSpots.map((s) => (
+                  <option key={s.siteid} value={s.siteid}>
+                    {s.sitename} — {s.sitetype} — ${s.rate}/night
+                  </option>
+                ))}
               </SelectInput>
             </Field>
-          ) : (
-            ""
+
+            <Field>
+              <Label>Pets</Label>
+              <CheckboxWrapper>
+                <StyledCheckbox
+                  name="pets"
+                  value={form.pets}
+                  onChange={updateField}
+                  type="checkbox"
+                />
+                <CheckboxLabel>I have pets</CheckboxLabel>
+              </CheckboxWrapper>
+            </Field>
+          </Grid>
+
+          {holidayWarning && (
+            <HolidayWarning>
+              <WarningIcon>⚠️</WarningIcon>
+              <WarningText>
+                <strong>Holiday/Special Event Notice:</strong> Your reservation
+                overlaps with {holidayWarning.map((h) => h.name).join(", ")}.
+                Cancellation policy: 1-day fee applies regardless of timing.
+              </WarningText>
+            </HolidayWarning>
           )}
 
-          <Field>
-            <Label>RV Size</Label>
-            <TextInput
-              name="rvSize"
-              value={form.rvSize}
-              onChange={updateField}
-            />
-          </Field>
+          {error && (
+            <ErrorWarning>
+              <WarningIcon>⚠️</WarningIcon>
+              <WarningText>
+                <strong>Error:</strong> {error}
+              </WarningText>
+            </ErrorWarning>
+          )}
 
-          <Field>
-            <Label>Start Date</Label>
-            <DateInput
-              name="startDate"
-              type="date"
-              value={form.startDate}
-              onChange={updateField}
-            />
-          </Field>
+          {costPreview && (
+            <CostPreview>
+              <CostTitle>Reservation Cost Preview</CostTitle>
+              <CostBreakdown>
+                <CostRow>
+                  <CostLabel>Nightly Rate:</CostLabel>
+                  <CostValue>
+                    ${parseFloat(costPreview.rate).toFixed(2)}
+                  </CostValue>
+                </CostRow>
+                <CostRow>
+                  <CostLabel>Number of Nights:</CostLabel>
+                  <CostValue>{costPreview.nights}</CostValue>
+                </CostRow>
+                <CostDivider />
+                <CostRow $total>
+                  <CostLabel>Total Cost:</CostLabel>
+                  <CostValue>
+                    ${parseFloat(costPreview.totalCost).toFixed(2)}
+                  </CostValue>
+                </CostRow>
+              </CostBreakdown>
+            </CostPreview>
+          )}
 
-          <Field>
-            <Label>End Date</Label>
-            <DateInput
-              name="endDate"
-              type="date"
-              value={form.endDate}
-              onChange={updateField}
-            />
-          </Field>
+          <Actions>
+            <StyledButton $emphasize={true} type="submit">
+              Submit Reservation
+            </StyledButton>
+          </Actions>
+        </Form>
+        {form.userId == "new" && <RegisterForm onRegister={updateUsersList} />}
+      </Card>
 
-          <Field>
-            <Label>Available Spot</Label>
-            <SelectInput
-              name="spot"
-              value={form.spot}
-              onChange={updateField}
-              disabled={!!prefillSpot}
-            >
-              <option value="">
-                {prefillSpot ? prefillSpot.name : "-- Select a spot --"}
-              </option>
-
-              {availableSpots.map((s) => (
-                <option key={s.siteid} value={s.siteid}>
-                  {s.sitename} — {s.sitetype} — ${s.rate}/night
-                </option>
-              ))}
-            </SelectInput>
-          </Field>
-        </Grid>
-
-        {holidayWarning && (
-          <HolidayWarning>
-            <WarningIcon>⚠️</WarningIcon>
-            <WarningText>
-              <strong>Holiday/Special Event Notice:</strong> Your reservation
-              overlaps with {holidayWarning.map((h) => h.name).join(", ")}.
-              Cancellation policy: 1-day fee applies regardless of timing.
-            </WarningText>
-          </HolidayWarning>
-        )}
-
-        {costPreview && (
-          <CostPreview>
-            <CostTitle>Reservation Cost Preview</CostTitle>
-            <CostBreakdown>
-              <CostRow>
-                <CostLabel>Nightly Rate:</CostLabel>
-                <CostValue>
-                  ${parseFloat(costPreview.rate).toFixed(2)}
-                </CostValue>
-              </CostRow>
-              <CostRow>
-                <CostLabel>Number of Nights:</CostLabel>
-                <CostValue>{costPreview.nights}</CostValue>
-              </CostRow>
-              <CostDivider />
-              <CostRow $total>
-                <CostLabel>Total Cost:</CostLabel>
-                <CostValue>
-                  ${parseFloat(costPreview.totalCost).toFixed(2)}
-                </CostValue>
-              </CostRow>
-            </CostBreakdown>
-          </CostPreview>
-        )}
-
-        <Actions>
-          <StyledButton $emphasize={true} type="submit">
-            Submit Reservation
-          </StyledButton>
-        </Actions>
-      </Form>
-      {form.userId == "new" && <RegisterForm onRegister={updateUsersList} />}
-    </Card>
+      {showPetModal && (
+        <PetConfirmModal
+          onConfirm={handlePetPolicyConfirm}
+          onClose={closePetConfirmModal}
+          isAgreed={petPolicyAgreed}
+          onAgreeChange={setPetPolicyAgreed}
+        />
+      )}
+    </>
   );
 }
 
@@ -492,6 +565,17 @@ const HolidayWarning = styled.div`
   margin-top: 8px;
 `;
 
+const ErrorWarning = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #ffd0d0ff 0%, #ffb3b3ff 100%);
+  border: 1px solid #f48f8aff;
+  border-radius: 10px;
+  margin-top: 8px;
+`;
+
 const WarningIcon = styled.span`
   font-size: 1.25rem;
 `;
@@ -543,4 +627,36 @@ const CostDivider = styled.hr`
   border: none;
   border-top: 1px dashed #10b981;
   margin: 6px 0;
+`;
+
+const StyledCheckbox = styled.input.attrs({ type: "checkbox" })`
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+
+  &:checked {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+  }
+`;
+
+const CheckboxWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const CheckboxLabel = styled.label`
+  font-size: 0.95rem;
+  color: #475569;
+  margin: 0;
+  cursor: pointer;
 `;

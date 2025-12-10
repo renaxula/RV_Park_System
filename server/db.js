@@ -205,7 +205,7 @@ async function loadDemoData() {
       status: "Active Duty",
       roleId: 1,
       salt: "dingle",
-      password: "12345678",
+      password: "1234",
     },
     {
       emailAddress: "employee@mail.com",
