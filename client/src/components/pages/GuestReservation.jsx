@@ -64,24 +64,18 @@ function validateReservationDates(startDate, endDate) {
 
 export function GuestReservation() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, refreshUser } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   
-  // Step 1: Guest info, Step 2: Reservation details
-  const [step, setStep] = useState(1);
-  const [guestUser, setGuestUser] = useState(null);
   const [error, setError] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
 
-  // Guest info form
-  const [guestForm, setGuestForm] = useState({
+  // Combined form: Guest info + Reservation details
+  const [form, setForm] = useState({
+    // Guest info
     email: "",
     firstName: "",
     lastName: "",
     phone: "",
-  });
-
-  // Reservation form
-  const [form, setForm] = useState({
+    // Reservation details
     rvSize: "",
     startDate: "",
     endDate: "",
@@ -97,17 +91,7 @@ export function GuestReservation() {
     if (isAuthenticated && user?.accountStatus === 'complete') {
       navigate('/make-reservation');
     }
-    // If user has pending account, skip to step 2
-    if (isAuthenticated && user?.accountStatus === 'pending') {
-      setGuestUser(user);
-      setStep(2);
-    }
   }, [isAuthenticated, user, navigate]);
-
-  function updateGuestField(e) {
-    const { name, value } = e.target;
-    setGuestForm({ ...guestForm, [name]: value });
-  }
 
   function updateField(e) {
     const { name, value } = e.target;
@@ -122,35 +106,6 @@ export function GuestReservation() {
       setForm({ ...form, startDate: value, endDate: endDateStr });
     } else {
       setForm({ ...form, [name]: value });
-    }
-  }
-
-  // Handle guest info submission
-  async function handleGuestSubmit(e) {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
-
-    try {
-      const res = await axios.post(
-        "http://localhost:3000/auth/guest-start",
-        guestForm,
-        { withCredentials: true }
-      );
-      
-      setGuestUser(res.data.user);
-      // Refresh auth context so ProtectedRoute sees the user as authenticated
-      await refreshUser();
-      setStep(2);
-    } catch (err) {
-      console.error(err);
-      if (err.response?.data?.existingAccount) {
-        setError("An account with this email already exists. Please login instead.");
-      } else {
-        setError(err.response?.data?.error || "Failed to start guest session");
-      }
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -231,16 +186,24 @@ export function GuestReservation() {
     fetchSpots();
   }, [form.startDate, form.endDate]);
 
-  async function handleReservationSubmit(e) {
+  function handleCheckout(e) {
     e.preventDefault();
     setError(null);
 
-    if (!guestUser?.userId) {
-      setError("Guest session not found. Please start over.");
-      setStep(1);
+    // Validate guest info
+    if (!form.email || !form.firstName || !form.lastName || !form.phone) {
+      setError("Please fill in all personal information fields");
       return;
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    // Validate reservation details
     if (!form.spot) {
       setError("Please select an available spot");
       return;
@@ -258,124 +221,91 @@ export function GuestReservation() {
       return;
     }
 
-    setSubmitting(true);
+    // Get the selected spot details for the payment page
+    const selectedSpot = availableSpots.find(s => s.siteid === parseInt(form.spot));
 
-    const body = {
-      userId: parseInt(guestUser.userId),
-      siteId: parseInt(form.spot),
-      startDate: form.startDate,
-      endDate: form.endDate,
-      notes: `RV: ${form.rvSize}`,
-    };
-
-    try {
-      const res = await axios.post("http://localhost:3000/reservations", body, {
-        withCredentials: true,
-      });
-      
-      // Get the selected spot details for the payment page
-      const selectedSpot = availableSpots.find(s => s.siteid === parseInt(form.spot));
-      
-      // Navigate to payment page with reservation details
-      navigate("/payment", {
-        state: {
-          reservation: res.data.reservation,
-          costDetails: costPreview,
-          spotDetails: selectedSpot,
-          isHoliday: holidayWarning !== null,
-          holidayNames: holidayWarning?.map(h => h.name) || [],
-          isGuestCheckout: true,
+    // Navigate to account creation page with all the data pre-filled
+    navigate("/complete-registration", {
+      state: {
+        guestData: {
+          email: form.email,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          phone: form.phone,
         },
-      });
-    } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.error || "Error making reservation");
-    } finally {
-      setSubmitting(false);
-    }
+        reservationData: {
+          siteId: parseInt(form.spot),
+          startDate: form.startDate,
+          endDate: form.endDate,
+          rvSize: form.rvSize,
+        },
+        costDetails: costPreview,
+        spotDetails: selectedSpot,
+        isHoliday: holidayWarning !== null,
+        holidayNames: holidayWarning?.map(h => h.name) || [],
+        fromGuestReservation: true,
+      },
+    });
   }
 
-  // Step 1: Guest Information
-  if (step === 1) {
-    return (
-      <Card>
-        <Form onSubmit={handleGuestSubmit}>
-          <Title>Reserve Without an Account</Title>
-          <Subtitle>Enter your information to get started. You'll create a password after payment.</Subtitle>
-
-          <Grid>
-            <Field>
-              <Label>Email</Label>
-              <TextInput
-                name="email"
-                type="email"
-                value={guestForm.email}
-                onChange={updateGuestField}
-                placeholder="your@email.com"
-                required
-              />
-            </Field>
-
-            <Field>
-              <Label>Phone</Label>
-              <TextInput
-                name="phone"
-                type="tel"
-                value={guestForm.phone}
-                onChange={updateGuestField}
-                placeholder="555-123-4567"
-                required
-              />
-            </Field>
-
-            <Field>
-              <Label>First Name</Label>
-              <TextInput
-                name="firstName"
-                value={guestForm.firstName}
-                onChange={updateGuestField}
-                placeholder="John"
-                required
-              />
-            </Field>
-
-            <Field>
-              <Label>Last Name</Label>
-              <TextInput
-                name="lastName"
-                value={guestForm.lastName}
-                onChange={updateGuestField}
-                placeholder="Doe"
-                required
-              />
-            </Field>
-          </Grid>
-
-          {error && <ErrorMessage>{error}</ErrorMessage>}
-
-          <Actions>
-            <StyledButton type="button" onClick={() => navigate('/login')}>
-              Already have an account? Login
-            </StyledButton>
-            <StyledButton $emphasize={true} type="submit" disabled={submitting}>
-              {submitting ? "Starting..." : "Continue to Reservation"}
-            </StyledButton>
-          </Actions>
-        </Form>
-      </Card>
-    );
-  }
-
-  // Step 2: Reservation Details
   return (
     <Card>
-      <Form onSubmit={handleReservationSubmit}>
-        <Title>Make a Reservation</Title>
-        <GuestBadge>
-          Booking as: {guestUser?.email}
-          <SmallText>You'll set a password after payment</SmallText>
-        </GuestBadge>
+      <Form onSubmit={handleCheckout}>
+        <Title>Reserve Your Spot</Title>
+        <Subtitle>Enter your details and reservation preferences. You'll create an account at checkout.</Subtitle>
 
+        {/* Personal Information Section */}
+        <SectionTitle>Your Information</SectionTitle>
+        <Grid>
+          <Field>
+            <Label>Email *</Label>
+            <TextInput
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={updateField}
+              placeholder="your@email.com"
+              required
+            />
+          </Field>
+
+          <Field>
+            <Label>Phone *</Label>
+            <TextInput
+              name="phone"
+              type="tel"
+              value={form.phone}
+              onChange={updateField}
+              placeholder="555-123-4567"
+              required
+            />
+          </Field>
+
+          <Field>
+            <Label>First Name *</Label>
+            <TextInput
+              name="firstName"
+              value={form.firstName}
+              onChange={updateField}
+              placeholder="John"
+              required
+            />
+          </Field>
+
+          <Field>
+            <Label>Last Name *</Label>
+            <TextInput
+              name="lastName"
+              value={form.lastName}
+              onChange={updateField}
+              placeholder="Doe"
+              required
+            />
+          </Field>
+        </Grid>
+
+        {/* Reservation Details Section */}
+        <SectionTitle>Reservation Details</SectionTitle>
         <Grid>
           <Field>
             <Label>RV Size</Label>
@@ -383,35 +313,39 @@ export function GuestReservation() {
               name="rvSize"
               value={form.rvSize}
               onChange={updateField}
+              placeholder="e.g., 30ft Class A"
             />
           </Field>
 
           <Field>
-            <Label>Start Date</Label>
+            <Label>Start Date *</Label>
             <DateInput
               name="startDate"
               type="date"
               value={form.startDate}
               onChange={updateField}
+              required
             />
           </Field>
 
           <Field>
-            <Label>End Date</Label>
+            <Label>End Date *</Label>
             <DateInput
               name="endDate"
               type="date"
               value={form.endDate}
               onChange={updateField}
+              required
             />
           </Field>
 
           <Field>
-            <Label>Available Spot</Label>
+            <Label>Available Spot *</Label>
             <SelectInput
               name="spot"
               value={form.spot}
               onChange={updateField}
+              required
             >
               <option value="">-- Select a spot --</option>
               {availableSpots.map((s) => (
@@ -458,11 +392,11 @@ export function GuestReservation() {
         {error && <ErrorMessage>{error}</ErrorMessage>}
 
         <Actions>
-          <StyledButton type="button" onClick={() => setStep(1)}>
-            Back
+          <StyledButton type="button" onClick={() => navigate('/login')}>
+            Already have an account? Login
           </StyledButton>
-          <StyledButton $emphasize={true} type="submit" disabled={submitting}>
-            {submitting ? "Processing..." : "Continue to Payment"}
+          <StyledButton $emphasize={true} type="submit">
+            Proceed to Checkout
           </StyledButton>
         </Actions>
       </Form>
@@ -489,21 +423,13 @@ const Subtitle = styled.p`
   color: #64748b;
 `;
 
-const GuestBadge = styled.div`
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  border: 1px solid #3b82f6;
-  border-radius: 8px;
-  padding: 12px 16px;
-  color: #1e40af;
-  font-weight: 500;
-`;
-
-const SmallText = styled.span`
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 400;
-  margin-top: 4px;
-  color: #3b82f6;
+const SectionTitle = styled.h3`
+  margin: 8px 0 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #334155;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
 `;
 
 const Grid = styled.div`
@@ -637,4 +563,3 @@ const CostDivider = styled.hr`
   border-top: 1px dashed #10b981;
   margin: 6px 0;
 `;
-

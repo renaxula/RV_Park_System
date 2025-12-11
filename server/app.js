@@ -699,9 +699,9 @@ app.get("/api/occupied", async (req, res) => {
   }
 });
 
-app.post("/reservations", async (req, res) => {
+app.post("/reservations", requireAuth, async (req, res) => {
   try {
-    const { startDate, endDate } = req.body;
+    const { userId, siteId, startDate, endDate, notes } = req.body;
 
     // Validate reservation dates
     const validation = validateReservationDates(startDate, endDate);
@@ -709,7 +709,25 @@ app.post("/reservations", async (req, res) => {
       return res.status(400).json({ error: validation.error });
     }
 
-    const reservation = await createReservation(req.body);
+    // Determine which user ID to use:
+    // - Employees/admins can create reservations for other users
+    // - Regular customers always use their own session ID
+    let targetUserId = req.session.userId;
+    
+    if (userId && (req.session.role === "employee" || req.session.role === "admin")) {
+      // Staff can specify a different user
+      targetUserId = parseInt(userId);
+    }
+
+    const reservationData = {
+      userId: targetUserId,
+      siteId: parseInt(siteId),
+      startDate,
+      endDate,
+      notes: notes || "",
+    };
+
+    const reservation = await createReservation(reservationData);
     res.status(201).json({
       message: "Reservation created",
       reservation,

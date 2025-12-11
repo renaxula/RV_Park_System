@@ -84,27 +84,55 @@ function validateReservationDates(startDate, endDate) {
 export function MakeReservation() {
   const location = useLocation();
   const prefillSpot = location.state?.spot;
+  // Pre-filled data from guest reservation flow
+  const prefillReservation = location.state?.prefillReservation;
+  const prefillSpotDetails = location.state?.spotDetails;
+  const prefillCostDetails = location.state?.costDetails;
+  const prefillIsHoliday = location.state?.isHoliday;
+  const prefillHolidayNames = location.state?.holidayNames;
+  const fromGuestFlow = location.state?.fromGuestFlow;
+  
   const { user, homepage } = useAuth();
   const navigate = useNavigate();
   const [usersList, setUsersList] = useState([]);
   const [showPetModal, setShowPetModal] = useState(false);
   const [petPolicyAgreed, setPetPolicyAgreed] = useState(false);
 
-  const [form, setForm] = useState({
-    userId: user.role != "customer" ? "" : user.userId,
-    rvSize: prefillSpot?.type || "",
-    startDate: new Date().toISOString().split("T")[0],
-    endDate: new Date(new Date().setDate(new Date().getDate() + 7))
-      .toISOString()
-      .split("T")[0],
-    spot: prefillSpot?.id || "",
-    pets: false,
-    notes: "",
-  });
+  // Determine initial form values - prioritize guest flow prefill data
+  const getInitialFormValues = () => {
+    if (prefillReservation) {
+      return {
+        userId: user.role != "customer" ? "" : user.userId,
+        rvSize: prefillReservation.rvSize || "",
+        startDate: prefillReservation.startDate || new Date().toISOString().split("T")[0],
+        endDate: prefillReservation.endDate || new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split("T")[0],
+        spot: prefillReservation.siteId?.toString() || "",
+        pets: false,
+        notes: "",
+      };
+    }
+    return {
+      userId: user.role != "customer" ? "" : user.userId,
+      rvSize: prefillSpot?.type || "",
+      startDate: new Date().toISOString().split("T")[0],
+      endDate: new Date(new Date().setDate(new Date().getDate() + 7))
+        .toISOString()
+        .split("T")[0],
+      spot: prefillSpot?.id || "",
+      pets: false,
+      notes: "",
+    };
+  };
 
-  const [availableSpots, setAvailableSpots] = useState([]);
-  const [costPreview, setCostPreview] = useState(null);
-  const [holidayWarning, setHolidayWarning] = useState(null);
+  const [form, setForm] = useState(getInitialFormValues);
+
+  const [availableSpots, setAvailableSpots] = useState(
+    prefillSpotDetails ? [prefillSpotDetails] : []
+  );
+  const [costPreview, setCostPreview] = useState(prefillCostDetails || null);
+  const [holidayWarning, setHolidayWarning] = useState(
+    prefillIsHoliday ? prefillHolidayNames?.map(name => ({ name })) : null
+  );
   const [error, setError] = useState(null);
 
   function updateField(e) {
@@ -234,8 +262,13 @@ export function MakeReservation() {
   };
 
   const submitReservation = async () => {
+    // For employees/admins making reservations for others, include the userId
+    // For customers or when no user is selected, omit userId (server will use session)
+    const parsedUserId = parseInt(form.userId);
+    const shouldIncludeUserId = user.role !== "customer" && !isNaN(parsedUserId) && parsedUserId > 0;
+    
     const body = {
-      userId: parseInt(form.userId),
+      ...(shouldIncludeUserId && { userId: parsedUserId }),
       siteId: parseInt(form.spot),
       startDate: form.startDate,
       endDate: form.endDate,
@@ -243,7 +276,9 @@ export function MakeReservation() {
     };
 
     try {
-      const res = await axios.post("http://localhost:3000/reservations", body);
+      const res = await axios.post("http://localhost:3000/reservations", body, {
+        withCredentials: true,
+      });
 
       const selectedSpot = availableSpots.find(
         (s) => s.siteid === parseInt(form.spot)
@@ -299,6 +334,15 @@ export function MakeReservation() {
       return;
     }
 
+    // Employees/admins must select a user (not "new" and not empty)
+    if (user.role !== "customer") {
+      const parsedUserId = parseInt(form.userId);
+      if (!form.userId || form.userId === "new" || isNaN(parsedUserId) || parsedUserId <= 0) {
+        alert("Please select a customer for this reservation");
+        return;
+      }
+    }
+
     if (!form.spot) {
       alert("Please select an available spot");
       return;
@@ -321,6 +365,17 @@ export function MakeReservation() {
       <Card>
         <Form onSubmit={handleSubmit}>
           <Title>Make a Reservation</Title>
+
+          {fromGuestFlow && (
+            <GuestFlowBanner>
+              <BannerIcon>✓</BannerIcon>
+              <BannerText>
+                <strong>Account created successfully!</strong>
+                <br />
+                Your reservation details have been pre-filled. Review and submit to continue.
+              </BannerText>
+            </GuestFlowBanner>
+          )}
 
           <Grid>
             {user.role != "customer" ? (
@@ -674,4 +729,35 @@ const CheckboxLabel = styled.label`
   color: #475569;
   margin: 0;
   cursor: pointer;
+`;
+
+const GuestFlowBanner = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid #10b981;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 8px;
+`;
+
+const BannerIcon = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #10b981;
+  color: white;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: bold;
+  flex-shrink: 0;
+`;
+
+const BannerText = styled.div`
+  color: #065f46;
+  font-size: 0.9rem;
+  line-height: 1.4;
 `;
