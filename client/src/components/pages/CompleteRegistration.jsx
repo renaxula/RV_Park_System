@@ -55,7 +55,15 @@ export function CompleteRegistration() {
   }, [isAuthenticated, user, navigate, fromGuestReservation]);
 
   const handleChange = (field) => (e) => {
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    const value = e.target.value;
+    setForm((prev) => {
+      const newForm = { ...prev, [field]: value };
+      // Clear status when DOD Authorized Civilian is selected
+      if (field === "affiliation" && value === "DOD Authorized Civilian") {
+        newForm.status = "";
+      }
+      return newForm;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -72,8 +80,14 @@ export function CompleteRegistration() {
       return;
     }
 
-    if (!form.affiliation || !form.status) {
-      setError("Please select your affiliation and status");
+    if (!form.affiliation) {
+      setError("Please select your affiliation");
+      return;
+    }
+
+    // Status is only required for non-DOD Authorized Civilian affiliations
+    if (form.affiliation !== "DOD Authorized Civilian" && !form.status) {
+      setError("Please select your status");
       return;
     }
 
@@ -221,21 +235,23 @@ export function CompleteRegistration() {
             </Select>
           </Label>
 
-          <Label>
-            Status *
-            <Select
-              value={form.status}
-              onChange={handleChange("status")}
-              required
-            >
-              <option value="">Select Status</option>
-              <option value="Active Duty">Active Duty</option>
-              <option value="Retired">Retired</option>
-              <option value="Reservist">Reservist</option>
-              <option value="PCS In">PCS In</option>
-              <option value="PCS Out">PCS Out</option>
-            </Select>
-          </Label>
+          {form.affiliation !== "DOD Authorized Civilian" && (
+            <Label>
+              Status *
+              <Select
+                value={form.status}
+                onChange={handleChange("status")}
+                required
+              >
+                <option value="">Select Status</option>
+                <option value="Active Duty">Active Duty</option>
+                <option value="Retired">Retired</option>
+                <option value="Reservist">Reservist</option>
+                <option value="PCS In">PCS In</option>
+                <option value="PCS Out">PCS Out</option>
+              </Select>
+            </Label>
+          )}
 
           <Label>
             Password * (min 8 chars)
@@ -319,21 +335,23 @@ export function CompleteRegistration() {
           </Select>
         </Label>
 
-        <Label>
-          Status
-          <Select
-            value={form.status}
-            onChange={handleChange("status")}
-            required
-          >
-            <option value="">Select Status</option>
-            <option value="Active Duty">Active Duty</option>
-            <option value="Retired">Retired</option>
-            <option value="Reservist">Reservist</option>
-            <option value="PCS In">PCS In</option>
-            <option value="PCS Out">PCS Out</option>
-          </Select>
-        </Label>
+        {form.affiliation !== "DOD Authorized Civilian" && (
+          <Label>
+            Status
+            <Select
+              value={form.status}
+              onChange={handleChange("status")}
+              required
+            >
+              <option value="">Select Status</option>
+              <option value="Active Duty">Active Duty</option>
+              <option value="Retired">Retired</option>
+              <option value="Reservist">Reservist</option>
+              <option value="PCS In">PCS In</option>
+              <option value="PCS Out">PCS Out</option>
+            </Select>
+          </Label>
+        )}
 
         <Label>
           Password (min 8 chars)
