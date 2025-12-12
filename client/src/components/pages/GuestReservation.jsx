@@ -54,7 +54,7 @@ function validateReservationDates(startDate, endDate) {
       touchesPeakSeason = true;
       break;
     }
-    // checkDate.setDate(checkDate.getDate() + 1);
+    checkDate.setDate(checkDate.getDate() + 1);
   }
 
   if (touchesPeakSeason && durationDays > 14) {
