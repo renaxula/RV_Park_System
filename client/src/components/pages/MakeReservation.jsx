@@ -155,10 +155,10 @@ export function MakeReservation() {
       console.log("Validation result:", validation);
       if (!validation.valid) {
         setError(validation.error);
-        return;
+      }else {
+        setError(null);
       }
 
-      setError(null);
       setForm({ ...form, [name]: value });
     } else {
       setForm({ ...form, [name]: value });
