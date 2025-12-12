@@ -311,36 +311,38 @@ export function MakeReservation() {
     }
   }, []);
 
-  const fetchUsers = async (newUserEmail) => {
-    try {
-      const response = await fetch("http://localhost:3000/admin/users", {
-        credentials: "include",
-      });
-      if (!response.ok) {
-        throw new Error("Failed to fetch users");
-      }
+  const fetchUsers = async () => {
+    const response = await fetch("http://localhost:3000/admin/users", {
+      credentials: "include",
+    });
+    const data = await response.json();
+    setUsersList(data);
+    return data;        // <-- return the list
+  };
 
-      const data = await response.json();
-      setUsersList(data);
+  const updateUsersList = async (newEmail) => {
+    const updated = await fetchUsers();
+    const matched = updated.find((u) => u.emailaddress === newEmail);
 
-      if (newUserEmail) {
-        //console.log(data);
-        //console.log(newUserEmail);
-        const newUser = data.find(
-          (u) => u.emailaddress === newUserEmail.toLowerCase()
-        );
-        setForm({ ...form, userId: newUser.userid });
-        //console.log(newUser[0]);
-        setAutoSubmit(true);
-      }
-    } catch (err) {
-      setError(err.message);
+    if (matched) {
+      setForm((prev) => ({
+        ...prev,
+        userId: matched.userid.toString(),
+      }));
+
+      setAutoSubmit(true);
     }
   };
 
-  const updateUsersList = (newEmail) => {
-    fetchUsers(newEmail);
-  };
+  function setUserIdByEmail(email) {
+    const matchedUser = usersList.find((u) => u.emailaddress === email);
+    if (matchedUser) {
+      setForm((prevForm) => ({
+        ...prevForm,
+        userId: matchedUser.userid.toString(),
+      }));
+    }
+  }
 
   useEffect(() => {
     if (autoSubmit && user.role != "customer") {
@@ -415,7 +417,7 @@ export function MakeReservation() {
                   name="userId"
                   onChange={updateField}
                 >
-                  <option value="" selected disabled>
+                  <option value="" disabled>
                     -- Select User --
                   </option>
                   <option value="new">New User</option>

@@ -34,7 +34,7 @@ export function RegisterForm(props) {
 
     try {
       await register(form);
-      props.onRegister(form.email);
+      await props.onRegister(form.email);
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Registration failed");

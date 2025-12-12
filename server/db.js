@@ -668,6 +668,112 @@ async function loadDemoData() {
       endDate: "2025-11-9",
       notes: "nov 10-2",
     },
+    // Small RV parking full from 12-20 to 12-30
+    {
+      userId: 1,
+      siteId: 2,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 2",
+    },
+    {
+      userId: 2,
+      siteId: 3,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 3",
+    },
+    {
+      userId: 3,
+      siteId: 4,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 4",
+    },
+    {
+      userId: 1,
+      siteId: 5,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 5",
+    },
+    {
+      userId: 2,
+      siteId: 6,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 6",
+    },
+    {
+      userId: 3,
+      siteId: 7,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 7",
+    },
+    {
+      userId: 1,
+      siteId: 8,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 8",
+    },
+    {
+      userId: 2,
+      siteId: 10,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 10",
+    },
+    {
+      userId: 3,
+      siteId: 11,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 11",
+    },
+    {
+      userId: 1,
+      siteId: 12,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 12",
+    },
+    {
+      userId: 2,
+      siteId: 13,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 13",
+    },
+    {
+      userId: 3,
+      siteId: 14,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 14",
+    },
+    {
+      userId: 1,
+      siteId: 15,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 15",
+    },
+    {
+      userId: 2,
+      siteId: 16,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 16",
+    },
+    {
+      userId: 2,
+      siteId: 48,
+      startDate: "2025-12-20",
+      endDate: "2025-12-30",
+      notes: "holiday stay 16",
+    },
   ];
 
   const roles = [
@@ -1264,7 +1370,6 @@ async function addSiteType(sitetype, rate) {
     throw err;
   }
 }
-
 
 async function getSiteById(siteTypeId) {
   try {
