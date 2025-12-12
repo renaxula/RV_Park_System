@@ -136,21 +136,43 @@ export function EditReservation() {
     setDatesChanged(hasDateChanged);
   }, [form.startDate, form.endDate, originalDates]);
 
-  useEffect(() => {
-    async function fetchSpots() {
-      try {
-        const res = await axios.get(
-          `http://localhost:3000/api/availableSites${dateFilter}`
+useEffect(() => {
+  async function fetchSpots() {
+    try {
+      const res = await axios.get(
+        `http://localhost:3000/api/availableSites${dateFilter}`
+      );
+
+      let availableSpots = res.data;
+
+      // If dates changed, treat current reservation as available
+      if (datesChanged && reservation) {
+        const alreadyIncluded = availableSpots.some(
+          spot => spot.siteid === reservation.siteid
         );
-        setSpots(res.data);
-      } catch (err) {
-        console.error("Error fetching available spots:", err);
+
+        if (!alreadyIncluded) {
+          availableSpots = [
+            ...availableSpots,
+            {
+              siteid: reservation.siteid,
+              sitename: reservation.sitename,
+              sitetype: reservation.sitetype,
+            },
+          ];
+        }
       }
+
+      setSpots(availableSpots);
+    } catch (err) {
+      console.error("Error fetching available spots:", err);
     }
-    if (dateFilter && datesChanged) {
-      fetchSpots();
-    }
-  }, [dateFilter, datesChanged]);
+  }
+
+  if (dateFilter && datesChanged) {
+    fetchSpots();
+  }
+}, [dateFilter, datesChanged, reservation]);
 
   useEffect(() => {
     if (!reservation || spots.length === 0 || !datesChanged) return;
