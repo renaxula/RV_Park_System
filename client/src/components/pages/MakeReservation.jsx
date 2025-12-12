@@ -305,26 +305,35 @@ export function MakeReservation() {
   }, []);
 
   const fetchUsers = async () => {
-    try {
-      const response = await fetch("http://localhost:3000/admin/users", {
-        credentials: "include",
-      });
-      if (!response.ok) {
-        throw new Error("Failed to fetch users");
-      }
+    const response = await fetch("http://localhost:3000/admin/users", {
+      credentials: "include",
+    });
+    const data = await response.json();
+    setUsersList(data);
+    return data;        // <-- return the list
+  };
 
-      const data = await response.json();
-      setUsersList(data);
+  const updateUsersList = async (newEmail) => {
+    const updated = await fetchUsers();
+    const matched = updated.find((u) => u.emailaddress === newEmail);
 
-      console.log(data);
-    } catch (err) {
-      setError(err.message);
+    if (matched) {
+      setForm((prev) => ({
+        ...prev,
+        userId: matched.userid.toString(),
+      }));
     }
   };
 
-  const updateUsersList = (newEmail) => {
-    fetchUsers();
-  };
+  function setUserIdByEmail(email) {
+    const matchedUser = usersList.find((u) => u.emailaddress === email);
+    if (matchedUser) {
+      setForm((prevForm) => ({
+        ...prevForm,
+        userId: matchedUser.userid.toString(),
+      }));
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -386,7 +395,7 @@ export function MakeReservation() {
                   name="userId"
                   onChange={updateField}
                 >
-                  <option value="" selected disabled>
+                  <option value="" disabled>
                     -- Select User --
                   </option>
                   <option value="new">New User</option>
