@@ -8,8 +8,12 @@ import { useAuth } from "../router/AuthContext";
 
 // Validation: 14-day limit in peak season (April-October), 6 months advance max
 function validateReservationDates(startDate, endDate) {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  // Parse dates as LOCAL dates, not UTC
+  const [startYear, startMonth, startDay] = startDate.split("-").map(Number);
+  const [endYear, endMonth, endDay] = endDate.split("-").map(Number);
+
+  const start = new Date(startYear, startMonth - 1, startDay);
+  const end = new Date(endYear, endMonth - 1, endDay);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -21,7 +25,11 @@ function validateReservationDates(startDate, endDate) {
     return { valid: false, error: "End date must be after start date" };
   }
 
-  // Check 6 months advance booking limit
+  if (start < today) {
+    return { valid: false, error: "Start date cannot be in the past" };
+  }
+
+  // 6-month advance booking max
   const sixMonthsFromNow = new Date(today);
   sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
   if (start > sixMonthsFromNow) {
@@ -31,16 +39,14 @@ function validateReservationDates(startDate, endDate) {
     };
   }
 
-  // Calculate duration in days
-  const durationMs = end - start;
-  const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
+  const durationDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
 
-  // Check if any part of the reservation falls in peak season (April-October)
   const isPeakSeason = (date) => {
     const month = date.getMonth();
     return month >= 3 && month <= 9;
   };
 
+  // Check each day for peak season intersection
   let touchesPeakSeason = false;
   const checkDate = new Date(start);
   while (checkDate < end) {
@@ -65,7 +71,7 @@ function validateReservationDates(startDate, endDate) {
 export function GuestReservation() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  
+
   const [error, setError] = useState(null);
 
   // Combined form: Guest info + Reservation details
@@ -88,25 +94,46 @@ export function GuestReservation() {
 
   // If user is already logged in with complete account, redirect to regular reservation
   useEffect(() => {
-    if (isAuthenticated && user?.accountStatus === 'complete') {
-      navigate('/make-reservation');
+    if (isAuthenticated && user?.accountStatus === "complete") {
+      navigate("/make-reservation");
     }
   }, [isAuthenticated, user, navigate]);
 
   function updateField(e) {
     const { name, value } = e.target;
-    
-    // If start date is changed, auto-populate end date to 1 week later
-    if (name === "startDate" && value) {
-      const startDate = new Date(value);
-      const endDate = new Date(startDate);
-      endDate.setDate(endDate.getDate() + 7);
-      const endDateStr = endDate.toISOString().split("T")[0];
-      
-      setForm({ ...form, startDate: value, endDate: endDateStr });
-    } else {
+
+    // DATE VALIDATION (same behavior as MakeReservation)
+    if (name === "startDate" || name === "endDate") {
+      const newStart = name === "startDate" ? value : form.startDate;
+      const newEnd = name === "endDate" ? value : form.endDate;
+
+      // Only validate if both chosen
+      if (newStart && newEnd) {
+        const validation = validateReservationDates(newStart, newEnd);
+        if (!validation.valid) {
+          setError(validation.error);
+          return;
+        }
+        setError(null);
+      }
+
+      // Also auto-fill end date when start updates
+      if (name === "startDate") {
+        const startDate = new Date(value);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 7);
+        const endDateStr = endDate.toISOString().split("T")[0];
+
+        setForm({ ...form, startDate: value, endDate: endDateStr });
+        return;
+      }
+
       setForm({ ...form, [name]: value });
+      return;
     }
+
+    // NORMAL FIELD UPDATE
+    setForm({ ...form, [name]: value });
   }
 
   // Calculate cost when spot and dates are selected
@@ -118,13 +145,16 @@ export function GuestReservation() {
 
     async function fetchCost() {
       try {
-        const res = await axios.get("http://localhost:3000/api/calculate-cost", {
-          params: {
-            siteId: form.spot,
-            startDate: form.startDate,
-            endDate: form.endDate,
-          },
-        });
+        const res = await axios.get(
+          "http://localhost:3000/api/calculate-cost",
+          {
+            params: {
+              siteId: form.spot,
+              startDate: form.startDate,
+              endDate: form.endDate,
+            },
+          }
+        );
         setCostPreview(res.data);
       } catch (err) {
         console.error("Error calculating cost:", err);
@@ -143,12 +173,15 @@ export function GuestReservation() {
 
     async function checkHolidays() {
       try {
-        const res = await axios.get("http://localhost:3000/api/holidays/check", {
-          params: {
-            startDate: form.startDate,
-            endDate: form.endDate,
-          },
-        });
+        const res = await axios.get(
+          "http://localhost:3000/api/holidays/check",
+          {
+            params: {
+              startDate: form.startDate,
+              endDate: form.endDate,
+            },
+          }
+        );
         if (res.data.isHoliday) {
           setHolidayWarning(res.data.holidays);
         } else {
@@ -190,22 +223,9 @@ export function GuestReservation() {
     e.preventDefault();
     setError(null);
 
-    // Validate guest info
+    // REQUIRED FIELDS
     if (!form.email || !form.firstName || !form.lastName || !form.phone) {
       setError("Please fill in all personal information fields");
-      return;
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(form.email)) {
-      setError("Please enter a valid email address");
-      return;
-    }
-
-    // Validate reservation details
-    if (!form.spot) {
-      setError("Please select an available spot");
       return;
     }
 
@@ -214,7 +234,20 @@ export function GuestReservation() {
       return;
     }
 
-    // Validate reservation dates
+    // EMAIL FORMAT
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    // SPOT
+    if (!form.spot) {
+      setError("Please select an available spot");
+      return;
+    }
+
+    // DATE RULE VALIDATION
     const validation = validateReservationDates(form.startDate, form.endDate);
     if (!validation.valid) {
       setError(validation.error);
@@ -222,7 +255,9 @@ export function GuestReservation() {
     }
 
     // Get the selected spot details for the payment page
-    const selectedSpot = availableSpots.find(s => s.siteid === parseInt(form.spot));
+    const selectedSpot = availableSpots.find(
+      (s) => s.siteid === parseInt(form.spot)
+    );
 
     // Navigate to account creation page with all the data pre-filled
     navigate("/complete-registration", {
@@ -242,7 +277,7 @@ export function GuestReservation() {
         costDetails: costPreview,
         spotDetails: selectedSpot,
         isHoliday: holidayWarning !== null,
-        holidayNames: holidayWarning?.map(h => h.name) || [],
+        holidayNames: holidayWarning?.map((h) => h.name) || [],
         fromGuestReservation: true,
       },
     });
@@ -252,7 +287,10 @@ export function GuestReservation() {
     <Card>
       <Form onSubmit={handleCheckout}>
         <Title>Reserve Your Spot</Title>
-        <Subtitle>Enter your details and reservation preferences. You'll create an account at checkout.</Subtitle>
+        <Subtitle>
+          Enter your details and reservation preferences. You'll create an
+          account at checkout.
+        </Subtitle>
 
         {/* Personal Information Section */}
         <SectionTitle>Your Information</SectionTitle>
@@ -361,8 +399,8 @@ export function GuestReservation() {
           <HolidayWarning>
             <WarningIcon>⚠️</WarningIcon>
             <WarningText>
-              <strong>Holiday/Special Event Notice:</strong> Your reservation overlaps with{" "}
-              {holidayWarning.map(h => h.name).join(", ")}. 
+              <strong>Holiday/Special Event Notice:</strong> Your reservation
+              overlaps with {holidayWarning.map((h) => h.name).join(", ")}.
               Cancellation policy: 1-day fee applies regardless of timing.
             </WarningText>
           </HolidayWarning>
@@ -374,7 +412,9 @@ export function GuestReservation() {
             <CostBreakdown>
               <CostRow>
                 <CostLabel>Nightly Rate:</CostLabel>
-                <CostValue>${parseFloat(costPreview.rate).toFixed(2)}</CostValue>
+                <CostValue>
+                  ${parseFloat(costPreview.rate).toFixed(2)}
+                </CostValue>
               </CostRow>
               <CostRow>
                 <CostLabel>Number of Nights:</CostLabel>
@@ -383,7 +423,9 @@ export function GuestReservation() {
               <CostDivider />
               <CostRow $total>
                 <CostLabel>Total Cost:</CostLabel>
-                <CostValue>${parseFloat(costPreview.totalCost).toFixed(2)}</CostValue>
+                <CostValue>
+                  ${parseFloat(costPreview.totalCost).toFixed(2)}
+                </CostValue>
               </CostRow>
             </CostBreakdown>
           </CostPreview>
@@ -392,10 +434,10 @@ export function GuestReservation() {
         {error && <ErrorMessage>{error}</ErrorMessage>}
 
         <Actions>
-          <StyledButton type="button" onClick={() => navigate('/login')}>
+          <StyledButton type="button" onClick={() => navigate("/login")}>
             Already have an account? Login
           </StyledButton>
-          <StyledButton $emphasize={true} type="submit">
+          <StyledButton $emphasize={true} type="submit" disabled={!!error}>
             Proceed to Checkout
           </StyledButton>
         </Actions>

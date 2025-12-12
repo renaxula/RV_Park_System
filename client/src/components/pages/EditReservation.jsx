@@ -13,8 +13,12 @@ function formatDateForInput(dateStr) {
 
 // Validation: 14-day limit in peak season (April-October), 6 months advance max
 function validateReservationDates(startDate, endDate) {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  // Parse dates as LOCAL dates, not UTC
+  const [startYear, startMonth, startDay] = startDate.split("-").map(Number);
+  const [endYear, endMonth, endDay] = endDate.split("-").map(Number);
+
+  const start = new Date(startYear, startMonth - 1, startDay);
+  const end = new Date(endYear, endMonth - 1, endDay);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -26,6 +30,11 @@ function validateReservationDates(startDate, endDate) {
     return { valid: false, error: "End date must be after start date" };
   }
 
+  if (start < today) {
+    return { valid: false, error: "Start date cannot be in the past" };
+  }
+
+  // 6-month advance booking max
   const sixMonthsFromNow = new Date(today);
   sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
   if (start > sixMonthsFromNow) {
@@ -35,14 +44,14 @@ function validateReservationDates(startDate, endDate) {
     };
   }
 
-  const durationMs = end - start;
-  const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
+  const durationDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
 
   const isPeakSeason = (date) => {
     const month = date.getMonth();
     return month >= 3 && month <= 9;
   };
 
+  // Check each day for peak season intersection
   let touchesPeakSeason = false;
   const checkDate = new Date(start);
   while (checkDate < end) {
@@ -121,8 +130,8 @@ export function EditReservation() {
 
   useEffect(() => {
     // Check if dates have actually changed from original
-    const hasDateChanged = 
-      form.startDate !== originalDates.startDate || 
+    const hasDateChanged =
+      form.startDate !== originalDates.startDate ||
       form.endDate !== originalDates.endDate;
     setDatesChanged(hasDateChanged);
   }, [form.startDate, form.endDate, originalDates]);
@@ -130,7 +139,9 @@ export function EditReservation() {
   useEffect(() => {
     async function fetchSpots() {
       try {
-        const res = await axios.get(`http://localhost:3000/api/availableSites${dateFilter}`);
+        const res = await axios.get(
+          `http://localhost:3000/api/availableSites${dateFilter}`
+        );
         setSpots(res.data);
       } catch (err) {
         console.error("Error fetching available spots:", err);
@@ -154,9 +165,11 @@ export function EditReservation() {
       const isCurrentSiteAvailable = spots.some(
         (spot) => spot.siteid === reservation.siteid
       );
-      
+
       if (!isCurrentSiteAvailable) {
-        setAvailabilityError(`Your ${reservation.sitetype} site is not available for the selected dates. Please choose different dates.`);
+        setAvailabilityError(
+          `Your ${reservation.sitetype} site is not available for the selected dates. Please choose different dates.`
+        );
         setUpgradedSite(null);
         setCurrentSiteId(reservation.siteid);
         return;
@@ -183,15 +196,17 @@ export function EditReservation() {
 
     // Current site not available - try to find best fit
     const rvSize = extractRvSize(reservation.notes);
-    
+
     if (!rvSize) {
       // No RV size in notes, try to upgrade normally
       const currentTypeIndex = SITE_TYPE_HIERARCHY.findIndex(
         (item) => item.type === reservation.sitetype
       );
-      
+
       if (currentTypeIndex === -1) {
-        setAvailabilityError(`Your site is not available for the selected dates. Please choose different dates.`);
+        setAvailabilityError(
+          `Your site is not available for the selected dates. Please choose different dates.`
+        );
         setUpgradedSite(null);
         setCurrentSiteId(reservation.siteid);
         return;
@@ -218,19 +233,27 @@ export function EditReservation() {
       }
 
       // No upgrade available
-      setAvailabilityError(`No suitable sites available for the selected dates. Please choose different dates.`);
+      setAvailabilityError(
+        `No suitable sites available for the selected dates. Please choose different dates.`
+      );
       setUpgradedSite(null);
       setCurrentSiteId(reservation.siteid);
       return;
     }
 
-    // We have RV size - find the smallest site that fits
+    const currentTypeIndex = SITE_TYPE_HIERARCHY.findIndex(
+      (tier) => tier.type === reservation.sitetype
+    );
+
+    // Only allow upgrades or same tier (never downgrade)
     const suitableSites = SITE_TYPE_HIERARCHY.filter(
-      (tier) => tier.maxLength >= rvSize
+      (tier, index) => tier.maxLength >= rvSize && index >= currentTypeIndex
     );
 
     if (suitableSites.length === 0) {
-      setAvailabilityError(`Your RV (${rvSize}ft) is too large for any available sites.`);
+      setAvailabilityError(
+        `Your RV (${rvSize}ft) is too large for any available sites.`
+      );
       setUpgradedSite(null);
       setCurrentSiteId(reservation.siteid);
       return;
@@ -239,7 +262,7 @@ export function EditReservation() {
     // Try to find the smallest available site that fits
     for (const tier of suitableSites) {
       const availableSite = spots.find((spot) => spot.sitetype === tier.type);
-      
+
       if (availableSite) {
         // Found a suitable site
         if (availableSite.siteid === reservation.siteid) {
@@ -264,7 +287,9 @@ export function EditReservation() {
     }
 
     // No suitable sites available
-    setAvailabilityError(`No sites available that can accommodate your ${rvSize}ft RV for the selected dates. Please choose different dates.`);
+    setAvailabilityError(
+      `No sites available that can accommodate your ${rvSize}ft RV for the selected dates. Please choose different dates.`
+    );
     setUpgradedSite(null);
     setCurrentSiteId(reservation.siteid);
   }
@@ -308,14 +333,17 @@ export function EditReservation() {
 
     async function fetchNewCost() {
       try {
-        const res = await axios.get(`http://localhost:3000/api/calculate-cost`, {
-          params: {
-            siteId: currentSiteId,
-            startDate: form.startDate,
-            endDate: form.endDate,
-          },
-          withCredentials: true,
-        });
+        const res = await axios.get(
+          `http://localhost:3000/api/calculate-cost`,
+          {
+            params: {
+              siteId: currentSiteId,
+              startDate: form.startDate,
+              endDate: form.endDate,
+            },
+            withCredentials: true,
+          }
+        );
         setCostPreview(res.data);
       } catch (err) {
         console.error(err);
@@ -392,7 +420,7 @@ export function EditReservation() {
 
         const diff = costPreview.totalCost - (cancellationFee?.paidAmount || 0);
         let message = `Reservation updated to ${upgradedSite.newType} - ${upgradedSite.newSiteName}!\n\n`;
-        
+
         if (diff > 0) {
           message += `Additional amount owed: $${diff.toFixed(2)}`;
         } else if (diff < 0) {
@@ -400,7 +428,7 @@ export function EditReservation() {
         } else {
           message += "No price change.";
         }
-        
+
         alert(message);
       } else {
         // Normal update - same site
@@ -414,11 +442,15 @@ export function EditReservation() {
         );
 
         const diff = costPreview.totalCost - (cancellationFee?.paidAmount || 0);
-        
+
         if (diff > 0) {
-          alert(`Reservation updated! Additional amount owed: $${diff.toFixed(2)}`);
+          alert(
+            `Reservation updated! Additional amount owed: $${diff.toFixed(2)}`
+          );
         } else if (diff < 0) {
-          alert(`Reservation updated! Refund amount: $${Math.abs(diff).toFixed(2)}`);
+          alert(
+            `Reservation updated! Refund amount: $${Math.abs(diff).toFixed(2)}`
+          );
         } else {
           alert("Reservation updated — no price change.");
         }
@@ -447,9 +479,15 @@ export function EditReservation() {
       const refundInfo = refundRes.data;
       let message = "Reservation canceled successfully!\n\n";
       if (refundInfo.originalAmount > 0) {
-        message += `Original Payment: $${parseFloat(refundInfo.originalAmount).toFixed(2)}\n`;
-        message += `Cancellation Fee: $${parseFloat(refundInfo.cancellationFee).toFixed(2)}\n`;
-        message += `Refund Amount: $${parseFloat(refundInfo.refundAmount).toFixed(2)}\n\n`;
+        message += `Original Payment: $${parseFloat(
+          refundInfo.originalAmount
+        ).toFixed(2)}\n`;
+        message += `Cancellation Fee: $${parseFloat(
+          refundInfo.cancellationFee
+        ).toFixed(2)}\n`;
+        message += `Refund Amount: $${parseFloat(
+          refundInfo.refundAmount
+        ).toFixed(2)}\n\n`;
         message += `Reason: ${refundInfo.reason}`;
       } else {
         message += "No payment was found for this reservation.";
@@ -476,7 +514,11 @@ export function EditReservation() {
             <InfoLabel>Site:</InfoLabel>
             <InfoValue>
               {upgradedSite ? upgradedSite.newSiteName : reservation.sitename}
-              {upgradedSite && <UpgradeIcon title="Site changed due to availability">⬆️</UpgradeIcon>}
+              {upgradedSite && (
+                <UpgradeIcon title="Site changed due to availability">
+                  ⬆️
+                </UpgradeIcon>
+              )}
             </InfoValue>
           </InfoRow>
           <InfoRow>
@@ -487,7 +529,8 @@ export function EditReservation() {
           </InfoRow>
           {upgradedSite && (
             <UpgradeNotice>
-              ℹ️ Site changed from {upgradedSite.originalType} to {upgradedSite.newType} due to availability
+              ℹ️ Site changed from {upgradedSite.originalType} to{" "}
+              {upgradedSite.newType} due to availability
             </UpgradeNotice>
           )}
         </InfoSection>
@@ -524,14 +567,31 @@ export function EditReservation() {
         {/* Price summary */}
         {costPreview && !availabilityError && (
           <PriceBox>
-            <p>Old Total: <strong>${cancellationFee?.paidAmount?.toFixed(2) || 0}</strong></p>
-            <p>New Total: <strong>${costPreview.totalCost.toFixed(2)}</strong></p>
+            <p>
+              Old Total:{" "}
+              <strong>${cancellationFee?.paidAmount?.toFixed(2) || 0}</strong>
+            </p>
+            <p>
+              New Total: <strong>${costPreview.totalCost.toFixed(2)}</strong>
+            </p>
             <p>
               Difference:{" "}
-              <strong style={{ color: costPreview.totalCost - (cancellationFee?.paidAmount || 0) < 0 ? "green" : "red" }}>
+              <strong
+                style={{
+                  color:
+                    costPreview.totalCost - (cancellationFee?.paidAmount || 0) <
+                    0
+                      ? "green"
+                      : "red",
+                }}
+              >
                 {costPreview.totalCost - (cancellationFee?.paidAmount || 0) < 0
-                  ? `Refund $${Math.abs(costPreview.totalCost - (cancellationFee?.paidAmount || 0)).toFixed(2)}`
-                  : `Charge $${(costPreview.totalCost - (cancellationFee?.paidAmount || 0)).toFixed(2)}`}
+                  ? `Refund $${Math.abs(
+                      costPreview.totalCost - (cancellationFee?.paidAmount || 0)
+                    ).toFixed(2)}`
+                  : `Charge $${(
+                      costPreview.totalCost - (cancellationFee?.paidAmount || 0)
+                    ).toFixed(2)}`}
               </strong>
             </p>
           </PriceBox>
@@ -542,7 +602,8 @@ export function EditReservation() {
             <CancellationTitle>Cancellation Policy</CancellationTitle>
             {cancellationFee.isHoliday && (
               <HolidayNotice>
-                ⚠️ Holiday/Special Event: {cancellationFee.holidayNames.join(", ")}
+                ⚠️ Holiday/Special Event:{" "}
+                {cancellationFee.holidayNames.join(", ")}
               </HolidayNotice>
             )}
             <CancellationDetails>
@@ -552,17 +613,23 @@ export function EditReservation() {
               </DetailRow>
               <DetailRow>
                 <DetailLabel>Cancellation fee:</DetailLabel>
-                <DetailValue>${parseFloat(cancellationFee.fee).toFixed(2)}</DetailValue>
+                <DetailValue>
+                  ${parseFloat(cancellationFee.fee).toFixed(2)}
+                </DetailValue>
               </DetailRow>
               {cancellationFee.paidAmount > 0 && (
                 <>
                   <DetailRow>
                     <DetailLabel>Amount paid:</DetailLabel>
-                    <DetailValue>${parseFloat(cancellationFee.paidAmount).toFixed(2)}</DetailValue>
+                    <DetailValue>
+                      ${parseFloat(cancellationFee.paidAmount).toFixed(2)}
+                    </DetailValue>
                   </DetailRow>
                   <DetailRow $highlight>
                     <DetailLabel>Refund amount:</DetailLabel>
-                    <DetailValue>${parseFloat(cancellationFee.refundAmount).toFixed(2)}</DetailValue>
+                    <DetailValue>
+                      ${parseFloat(cancellationFee.refundAmount).toFixed(2)}
+                    </DetailValue>
                   </DetailRow>
                 </>
               )}
@@ -598,7 +665,9 @@ export function EditReservation() {
                 {cancellationFee.paidAmount > 0 && (
                   <ModalFeeRow $refund>
                     <span>You will receive:</span>
-                    <span>${parseFloat(cancellationFee.refundAmount).toFixed(2)}</span>
+                    <span>
+                      ${parseFloat(cancellationFee.refundAmount).toFixed(2)}
+                    </span>
                   </ModalFeeRow>
                 )}
               </ModalFeeInfo>
@@ -741,12 +810,12 @@ const DateInput = styled.input`
   color: #0f172a;
   font-size: 0.95rem;
   transition: box-shadow 160ms ease, border-color 160ms ease;
-  box-shadow: 0 1px 0 rgba(2,6,23,0.02);
+  box-shadow: 0 1px 0 rgba(2, 6, 23, 0.02);
 
   &:focus {
     outline: none;
-    border-color: rgba(59,130,246,0.9);
-    box-shadow: 0 6px 18px rgba(59,130,246,0.08);
+    border-color: rgba(59, 130, 246, 0.9);
+    box-shadow: 0 6px 18px rgba(59, 130, 246, 0.08);
   }
 `;
 
@@ -756,18 +825,18 @@ const Actions = styled.div`
 `;
 
 const SubmitButton = styled.button`
-  background: ${props => props.disabled ? '#94a3b8' : '#045de9'};
+  background: ${(props) => (props.disabled ? "#94a3b8" : "#045de9")};
   color: white;
   border: none;
   padding: 10px 16px;
   border-radius: 10px;
   font-weight: 600;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  opacity: ${props => props.disabled ? 0.6 : 1};
+  cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
+  opacity: ${(props) => (props.disabled ? 0.6 : 1)};
   transition: all 200ms ease;
 
   &:hover {
-    opacity: ${props => props.disabled ? 0.6 : 0.9};
+    opacity: ${(props) => (props.disabled ? 0.6 : 0.9)};
   }
 `;
 
@@ -822,7 +891,9 @@ const DetailRow = styled.div`
   font-size: 0.9rem;
   color: ${({ $highlight }) => ($highlight ? "#065f46" : "#78350f")};
   font-weight: ${({ $highlight }) => ($highlight ? "700" : "500")};
-  ${({ $highlight }) => $highlight && "background: #d1fae5; padding: 8px 10px; border-radius: 6px; margin-top: 4px;"}
+  ${({ $highlight }) =>
+    $highlight &&
+    "background: #d1fae5; padding: 8px 10px; border-radius: 6px; margin-top: 4px;"}
 `;
 
 const DetailLabel = styled.span``;
