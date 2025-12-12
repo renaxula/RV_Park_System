@@ -6,7 +6,6 @@ import { StyledButton } from "../ui/StyledButton";
 import { Card } from "../ui/Card";
 
 export function RegisterForm(props) {
-  const navigate = useNavigate();
   const { register, setError, error, isAuthenticated, homePage } = useAuth();
 
   const [form, setForm] = useState({
@@ -162,7 +161,7 @@ export function RegisterForm(props) {
 
         <LoginButtonContainer>
           <StyledButton type="submit" disabled={submitting}>
-            {submitting ? "Creating account..." : "Register"}
+            {submitting ? "Creating account..." : "Register and Submit"}
           </StyledButton>
         </LoginButtonContainer>
       </Form>
