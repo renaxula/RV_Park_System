@@ -54,7 +54,7 @@ function validateReservationDates(startDate, endDate) {
       touchesPeakSeason = true;
       break;
     }
-    checkDate.setDate(checkDate.getDate() + 1);
+    // checkDate.setDate(checkDate.getDate() + 1);
   }
 
   if (touchesPeakSeason && durationDays > 14) {
@@ -77,7 +77,7 @@ export function GuestReservation() {
   // Combined form: Guest info + Reservation details
   const [form, setForm] = useState({
     // Guest info
-    email: "",
+    email: "", 
     firstName: "",
     lastName: "",
     phone: "",
