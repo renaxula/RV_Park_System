@@ -765,48 +765,79 @@ app.get("/reservations/:userId", async (req, res) => {
   }
 });
 
-// Update a reservation
 app.put("/reservations/:id", requireAuth, async (req, res) => {
   const reservationId = parseInt(req.params.id);
-  const { siteId, startDate, endDate, notes } = req.body;
+  const { startDate, endDate } = req.body;
 
   try {
-    // Optionally verify the user owns this reservation or is employee/admin
+    // Get the existing reservation
     const existing = await getReservationById(reservationId);
     if (!existing) {
       return res.status(404).json({ error: "Reservation not found" });
     }
 
-    // Allow if user owns it, or is employee/admin
+    // Check permissions
     const isOwner = existing.userid === req.session.userId;
-    const isStaff =
-      req.session.role === "employee" || req.session.role === "admin";
-
+    const isStaff = req.session.role === "employee" || req.session.role === "admin";
     if (!isOwner && !isStaff) {
-      return res
-        .status(403)
-        .json({ error: "Not authorized to edit this reservation" });
+      return res.status(403).json({ error: "Not authorized to edit this reservation" });
     }
 
-    // Validate reservation dates
+    // Validate dates
     const validation = validateReservationDates(startDate, endDate);
     if (!validation.valid) {
       return res.status(400).json({ error: validation.error });
     }
 
-    const updated = await updateReservation(reservationId, {
-      siteId: siteId ? parseInt(siteId) : null,
+    // Calculate new total
+    const rate = await getSiteRate(existing.siteid);
+    const nights = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+    const newTotal = rate * nights;
+
+    // Update reservation dates and paidAmount
+    const updatedReservation = await updateReservation(reservationId, {
       startDate,
       endDate,
-      notes,
+      paidAmount: newTotal,
     });
 
-    res.json({ message: "Reservation updated", reservation: updated });
+    // Update payment table
+    const paymentRes = await pool.query(
+      `SELECT * FROM payments WHERE reservationId = $1`,
+      [reservationId]
+    );
+    const payment = paymentRes.rows[0];
+
+    if (payment) {
+      // Calculate difference
+      const difference = newTotal - payment.amount;
+
+      await pool.query(
+        `UPDATE payments
+         SET amount = $1
+         WHERE paymentId = $2`,
+        [newTotal, payment.paymentid]
+      );
+
+      res.json({ 
+        message: "Reservation updated", 
+        reservation: updatedReservation, 
+        difference 
+      });
+    } else {
+      // No payment found, optionally create one if needed
+      res.json({ 
+        message: "Reservation updated, but no payment record found", 
+        reservation: updatedReservation 
+      });
+    }
+
   } catch (err) {
     console.error("Error updating reservation:", err);
     res.status(500).json({ error: "Failed to update reservation" });
   }
 });
+
 
 // Cancel/delete a reservation
 app.delete("/reservations/:id", requireAuth, async (req, res) => {

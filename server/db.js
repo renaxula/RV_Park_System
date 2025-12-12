@@ -1265,6 +1265,20 @@ async function addSiteType(sitetype, rate) {
   }
 }
 
+
+async function getSiteById(siteTypeId) {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM site_types WHERE "siteTypeId" = $1`,
+      [siteTypeId]
+    );
+    return result.rows[0] || null;
+  } catch (err) {
+    console.error("Error in getSiteById:", err);
+    throw err;
+  }
+}
+
 module.exports = {
   pool,
   findUserByEmail,
@@ -1284,6 +1298,7 @@ module.exports = {
   getAllReservations,
   getAllSiteTypes,
   addSiteType,
+  getSiteById,
   // Holiday functions
   createHoliday,
   getAllHolidays,

@@ -26,18 +26,18 @@ function validateReservationDates(startDate, endDate) {
     return { valid: false, error: "End date must be after start date" };
   }
 
-  // Check 6 months advance booking limit
   const sixMonthsFromNow = new Date(today);
   sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
   if (start > sixMonthsFromNow) {
-    return { valid: false, error: "Reservations can only be made up to 6 months in advance" };
+    return {
+      valid: false,
+      error: "Reservations can only be made up to 6 months in advance",
+    };
   }
 
-  // Calculate duration in days
   const durationMs = end - start;
   const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
 
-  // Check if any part of the reservation falls in peak season (April-October)
   const isPeakSeason = (date) => {
     const month = date.getMonth();
     return month >= 3 && month <= 9;
@@ -54,9 +54,10 @@ function validateReservationDates(startDate, endDate) {
   }
 
   if (touchesPeakSeason && durationDays > 14) {
-    return { 
-      valid: false, 
-      error: "Reservations during peak season (April - October) are limited to 14 days" 
+    return {
+      valid: false,
+      error:
+        "Reservations during peak season (April - October) are limited to 14 days",
     };
   }
 
@@ -67,7 +68,7 @@ export function EditReservation() {
   const location = useLocation();
   const navigate = useNavigate();
   const { homePage } = useAuth();
- 
+
   const reservation = location.state?.reservation || null;
 
   const [form, setForm] = useState({
@@ -78,24 +79,63 @@ export function EditReservation() {
   const [cancellationFee, setCancellationFee] = useState(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
-  // Fetch cancellation fee info when component mounts
+  const [costPreview, setCostPreview] = useState(null);
+
+  // Fetch cancellation fee + initial cost
   useEffect(() => {
     if (!reservation) return;
 
-    async function fetchCancellationFee() {
+    async function fetchData() {
       try {
-        const res = await axios.get(
+        const c = await axios.get(
           `http://localhost:3000/api/cancellation-fee/${reservation.reservationid}`,
           { withCredentials: true }
         );
-        setCancellationFee(res.data);
+        setCancellationFee(c.data);
+
+        // initial cost calculation
+        const costRes = await axios.get(
+          `http://localhost:3000/api/calculate-cost`,
+          {
+            params: {
+              siteId: reservation.siteid,
+              startDate: reservation.startdate,
+              endDate: reservation.enddate,
+            },
+            withCredentials: true,
+          }
+        );
+        setCostPreview(costRes.data);
       } catch (err) {
-        console.error("Error fetching cancellation fee:", err);
+        console.error(err);
       }
     }
 
-    fetchCancellationFee();
+    fetchData();
   }, [reservation]);
+
+  // Recompute cost whenever dates change
+  useEffect(() => {
+    if (!form.startDate || !form.endDate) return;
+
+    async function fetchNewCost() {
+      try {
+        const res = await axios.get(`http://localhost:3000/api/calculate-cost`, {
+          params: {
+            siteId: reservation.siteid,
+            startDate: form.startDate,
+            endDate: form.endDate,
+          },
+          withCredentials: true,
+        });
+        setCostPreview(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    fetchNewCost();
+  }, [form.startDate, form.endDate, reservation.siteid]);
 
   if (!reservation) {
     return (
@@ -113,7 +153,6 @@ export function EditReservation() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    // Validate reservation dates
     const validation = validateReservationDates(form.startDate, form.endDate);
     if (!validation.valid) {
       alert(validation.error);
@@ -121,7 +160,7 @@ export function EditReservation() {
     }
 
     try {
-      await axios.put(
+      const res = await axios.put(
         `http://localhost:3000/reservations/${reservation.reservationid}`,
         {
           startDate: form.startDate,
@@ -130,7 +169,16 @@ export function EditReservation() {
         { withCredentials: true }
       );
 
-      alert("Reservation updated!");
+      const diff = costPreview.totalCost - (cancellationFee?.paidAmount || 0);
+      
+      if (diff > 0) {
+        alert(`Reservation updated! Additional amount owed: $${diff.toFixed(2)}`);
+      } else if (diff < 0) {
+        alert(`Reservation updated! Refund amount: $${Math.abs(diff).toFixed(2)}`);
+      } else {
+        alert("Reservation updated — no price change.");
+      }
+
       navigate(homePage);
     } catch (err) {
       console.error(err);
@@ -140,20 +188,17 @@ export function EditReservation() {
 
   async function cancelReservation() {
     try {
-      // First process the refund
       const refundRes = await axios.post(
         `http://localhost:3000/api/refund/${reservation.reservationid}`,
         {},
         { withCredentials: true }
       );
 
-      // Then delete the reservation
       await axios.delete(
         `http://localhost:3000/reservations/${reservation.reservationid}`,
         { withCredentials: true }
       );
 
-      // Show refund summary
       const refundInfo = refundRes.data;
       let message = "Reservation canceled successfully!\n\n";
       if (refundInfo.originalAmount > 0) {
@@ -214,6 +259,22 @@ export function EditReservation() {
           </Field>
         </Grid>
 
+        {/* Price summary */}
+        {costPreview && (
+          <PriceBox>
+            <p>Old Total: <strong>${cancellationFee?.paidAmount?.toFixed(2) || 0}</strong></p>
+            <p>New Total: <strong>${costPreview.totalCost.toFixed(2)}</strong></p>
+            <p>
+              Difference:{" "}
+              <strong style={{ color: costPreview.totalCost - (cancellationFee?.paidAmount || 0) < 0 ? "green" : "red" }}>
+                {costPreview.totalCost - (cancellationFee?.paidAmount || 0) < 0
+                  ? `Refund $${Math.abs(costPreview.totalCost - (cancellationFee?.paidAmount || 0)).toFixed(2)}`
+                  : `Charge $${(costPreview.totalCost - (cancellationFee?.paidAmount || 0)).toFixed(2)}`}
+              </strong>
+            </p>
+          </PriceBox>
+        )}
+
         {cancellationFee && (
           <CancellationInfo>
             <CancellationTitle>Cancellation Policy</CancellationTitle>
@@ -253,11 +314,8 @@ export function EditReservation() {
             Cancel Reservation
           </CancelButton>
 
-          <SubmitButton type="submit">
-            Save Changes
-          </SubmitButton>
+          <SubmitButton type="submit">Save Changes</SubmitButton>
         </Actions>
-
       </Form>
 
       {showCancelConfirm && (
@@ -295,6 +353,17 @@ export function EditReservation() {
     </Card>
   );
 }
+
+// ------- NEW: pricing box -------
+const PriceBox = styled.div`
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  background: #fafafa;
+`;
+
+
 
 
 
