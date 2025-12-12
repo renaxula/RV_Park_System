@@ -13,8 +13,12 @@ function formatDateForInput(dateStr) {
 
 // Validation: 14-day limit in peak season (April-October), 6 months advance max
 function validateReservationDates(startDate, endDate) {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  // Parse dates as LOCAL dates, not UTC
+  const [startYear, startMonth, startDay] = startDate.split("-").map(Number);
+  const [endYear, endMonth, endDay] = endDate.split("-").map(Number);
+
+  const start = new Date(startYear, startMonth - 1, startDay);
+  const end = new Date(endYear, endMonth - 1, endDay);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -26,6 +30,11 @@ function validateReservationDates(startDate, endDate) {
     return { valid: false, error: "End date must be after start date" };
   }
 
+  if (start < today) {
+    return { valid: false, error: "Start date cannot be in the past" };
+  }
+
+  // 6-month advance booking max
   const sixMonthsFromNow = new Date(today);
   sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
   if (start > sixMonthsFromNow) {
@@ -35,14 +44,14 @@ function validateReservationDates(startDate, endDate) {
     };
   }
 
-  const durationMs = end - start;
-  const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
+  const durationDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
 
   const isPeakSeason = (date) => {
     const month = date.getMonth();
     return month >= 3 && month <= 9;
   };
 
+  // Check each day for peak season intersection
   let touchesPeakSeason = false;
   const checkDate = new Date(start);
   while (checkDate < end) {
@@ -64,6 +73,23 @@ function validateReservationDates(startDate, endDate) {
   return { valid: true };
 }
 
+// Define site type upgrade hierarchy with max lengths
+const SITE_TYPE_HIERARCHY = [
+  { type: "small RV parking", maxLength: 40 },
+  { type: "medium RV parking", maxLength: 43 },
+  { type: "Extended Lot", maxLength: 55 },
+  { type: "large RV parking", maxLength: 65 },
+];
+
+const NON_UPGRADEABLE_TYPES = ["RV rental", "Tent", "dry storage"];
+
+// Helper to extract RV size from notes
+function extractRvSize(notes) {
+  if (!notes) return null;
+  const match = notes.match(/RV:\s*(\d+)/i);
+  return match ? parseInt(match[1]) : null;
+}
+
 export function EditReservation() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -76,10 +102,197 @@ export function EditReservation() {
     endDate: formatDateForInput(reservation?.enddate) || "",
   });
 
+  const [originalDates, setOriginalDates] = useState({
+    startDate: formatDateForInput(reservation?.startdate) || "",
+    endDate: formatDateForInput(reservation?.enddate) || "",
+  });
+
   const [cancellationFee, setCancellationFee] = useState(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-
   const [costPreview, setCostPreview] = useState(null);
+  const [spots, setSpots] = useState([]);
+  const [dateFilter, setDateFilter] = useState("");
+  const [upgradedSite, setUpgradedSite] = useState(null);
+  const [currentSiteId, setCurrentSiteId] = useState(reservation?.siteid);
+  const [datesChanged, setDatesChanged] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState(null);
+
+  useEffect(() => {
+    let filter = "";
+    if (form.startDate && form.startDate !== "") {
+      filter += "?startDate=" + form.startDate;
+    }
+    if (form.endDate && form.endDate !== "") {
+      filter += "&endDate=" + form.endDate;
+    }
+    setDateFilter(filter);
+  }, [form.startDate, form.endDate]);
+
+  useEffect(() => {
+    // Check if dates have actually changed from original
+    const hasDateChanged =
+      form.startDate !== originalDates.startDate ||
+      form.endDate !== originalDates.endDate;
+    setDatesChanged(hasDateChanged);
+  }, [form.startDate, form.endDate, originalDates]);
+
+  useEffect(() => {
+    async function fetchSpots() {
+      try {
+        const res = await axios.get(
+          `http://localhost:3000/api/availableSites${dateFilter}`
+        );
+        setSpots(res.data);
+      } catch (err) {
+        console.error("Error fetching available spots:", err);
+      }
+    }
+    if (dateFilter && datesChanged) {
+      fetchSpots();
+    }
+  }, [dateFilter, datesChanged]);
+
+  useEffect(() => {
+    if (!reservation || spots.length === 0 || !datesChanged) return;
+    handleSiteAvailability();
+  }, [spots, datesChanged]);
+
+  function handleSiteAvailability() {
+    if (!reservation || !datesChanged) return;
+
+    // Check if this is a non-upgradeable site type
+    if (NON_UPGRADEABLE_TYPES.includes(reservation.sitetype)) {
+      const isCurrentSiteAvailable = spots.some(
+        (spot) => spot.siteid === reservation.siteid
+      );
+
+      if (!isCurrentSiteAvailable) {
+        setAvailabilityError(
+          `Your ${reservation.sitetype} site is not available for the selected dates. Please choose different dates.`
+        );
+        setUpgradedSite(null);
+        setCurrentSiteId(reservation.siteid);
+        return;
+      }
+      // Site is available, clear any errors
+      setAvailabilityError(null);
+      setCurrentSiteId(reservation.siteid);
+      setUpgradedSite(null);
+      return;
+    }
+
+    // Check if current site is available
+    const isCurrentSiteAvailable = spots.some(
+      (spot) => spot.siteid === reservation.siteid
+    );
+
+    if (isCurrentSiteAvailable) {
+      // Current site is available, no upgrade needed
+      setAvailabilityError(null);
+      setCurrentSiteId(reservation.siteid);
+      setUpgradedSite(null);
+      return;
+    }
+
+    // Current site not available - try to find best fit
+    const rvSize = extractRvSize(reservation.notes);
+
+    if (!rvSize) {
+      // No RV size in notes, try to upgrade normally
+      const currentTypeIndex = SITE_TYPE_HIERARCHY.findIndex(
+        (item) => item.type === reservation.sitetype
+      );
+
+      if (currentTypeIndex === -1) {
+        setAvailabilityError(
+          `Your site is not available for the selected dates. Please choose different dates.`
+        );
+        setUpgradedSite(null);
+        setCurrentSiteId(reservation.siteid);
+        return;
+      }
+
+      // Look for next available tier
+      for (let i = currentTypeIndex + 1; i < SITE_TYPE_HIERARCHY.length; i++) {
+        const nextTierType = SITE_TYPE_HIERARCHY[i].type;
+        const availableSiteInNextTier = spots.find(
+          (spot) => spot.sitetype === nextTierType
+        );
+
+        if (availableSiteInNextTier) {
+          setAvailabilityError(null);
+          setCurrentSiteId(availableSiteInNextTier.siteid);
+          setUpgradedSite({
+            originalType: reservation.sitetype,
+            newType: availableSiteInNextTier.sitetype,
+            newSiteId: availableSiteInNextTier.siteid,
+            newSiteName: availableSiteInNextTier.sitename,
+          });
+          return;
+        }
+      }
+
+      // No upgrade available
+      setAvailabilityError(
+        `No suitable sites available for the selected dates. Please choose different dates.`
+      );
+      setUpgradedSite(null);
+      setCurrentSiteId(reservation.siteid);
+      return;
+    }
+
+    const currentTypeIndex = SITE_TYPE_HIERARCHY.findIndex(
+      (tier) => tier.type === reservation.sitetype
+    );
+
+    // Only allow upgrades or same tier (never downgrade)
+    const suitableSites = SITE_TYPE_HIERARCHY.filter(
+      (tier, index) => tier.maxLength >= rvSize && index >= currentTypeIndex
+    );
+
+    if (suitableSites.length === 0) {
+      setAvailabilityError(
+        `Your RV (${rvSize}ft) is too large for any available sites.`
+      );
+      setUpgradedSite(null);
+      setCurrentSiteId(reservation.siteid);
+      return;
+    }
+
+    // Try to find the smallest available site that fits
+    for (const tier of suitableSites) {
+      const availableSite = spots.find((spot) => spot.sitetype === tier.type);
+
+      if (availableSite) {
+        // Found a suitable site
+        if (availableSite.siteid === reservation.siteid) {
+          // It's the same site
+          setAvailabilityError(null);
+          setCurrentSiteId(reservation.siteid);
+          setUpgradedSite(null);
+          return;
+        } else {
+          // Different site - this is an upgrade or downgrade
+          setAvailabilityError(null);
+          setCurrentSiteId(availableSite.siteid);
+          setUpgradedSite({
+            originalType: reservation.sitetype,
+            newType: availableSite.sitetype,
+            newSiteId: availableSite.siteid,
+            newSiteName: availableSite.sitename,
+          });
+          return;
+        }
+      }
+    }
+
+    // No suitable sites available
+    setAvailabilityError(
+      `No sites available that can accommodate your ${rvSize}ft RV for the selected dates. Please choose different dates.`
+    );
+    setUpgradedSite(null);
+    setCurrentSiteId(reservation.siteid);
+  }
 
   // Fetch cancellation fee + initial cost
   useEffect(() => {
@@ -114,20 +327,23 @@ export function EditReservation() {
     fetchData();
   }, [reservation]);
 
-  // Recompute cost whenever dates change
+  // Recompute cost whenever dates change or site is upgraded
   useEffect(() => {
-    if (!form.startDate || !form.endDate) return;
+    if (!form.startDate || !form.endDate || !datesChanged) return;
 
     async function fetchNewCost() {
       try {
-        const res = await axios.get(`http://localhost:3000/api/calculate-cost`, {
-          params: {
-            siteId: reservation.siteid,
-            startDate: form.startDate,
-            endDate: form.endDate,
-          },
-          withCredentials: true,
-        });
+        const res = await axios.get(
+          `http://localhost:3000/api/calculate-cost`,
+          {
+            params: {
+              siteId: currentSiteId,
+              startDate: form.startDate,
+              endDate: form.endDate,
+            },
+            withCredentials: true,
+          }
+        );
         setCostPreview(res.data);
       } catch (err) {
         console.error(err);
@@ -135,7 +351,7 @@ export function EditReservation() {
     }
 
     fetchNewCost();
-  }, [form.startDate, form.endDate, reservation.siteid]);
+  }, [form.startDate, form.endDate, currentSiteId, datesChanged]);
 
   if (!reservation) {
     return (
@@ -160,23 +376,84 @@ export function EditReservation() {
     }
 
     try {
-      const res = await axios.put(
-        `http://localhost:3000/reservations/${reservation.reservationid}`,
-        {
-          startDate: form.startDate,
-          endDate: form.endDate,
-        },
-        { withCredentials: true }
-      );
+      // If site was upgraded, we need to handle it differently
+      if (upgradedSite) {
+        // Get the payment info first
+        const paymentRes = await axios.get(
+          `http://localhost:3000/api/payments/reservation/${reservation.reservationid}`,
+          { withCredentials: true }
+        );
+        const payment = paymentRes.data;
 
-      const diff = costPreview.totalCost - (cancellationFee?.paidAmount || 0);
-      
-      if (diff > 0) {
-        alert(`Reservation updated! Additional amount owed: $${diff.toFixed(2)}`);
-      } else if (diff < 0) {
-        alert(`Reservation updated! Refund amount: $${Math.abs(diff).toFixed(2)}`);
+        // Create new reservation with upgraded site FIRST
+        const newReservationRes = await axios.post(
+          `http://localhost:3000/reservations`,
+          {
+            siteId: currentSiteId,
+            startDate: form.startDate,
+            endDate: form.endDate,
+            notes: reservation.notes || "",
+          },
+          { withCredentials: true }
+        );
+
+        // If there was a payment, create a new payment for the new reservation
+        if (payment) {
+          // Use the original payment's card info to create new payment
+          await axios.post(
+            `http://localhost:3000/api/payments`,
+            {
+              reservationId: newReservationRes.data.reservation.reservationid,
+              amount: costPreview.totalCost,
+              cardNumber: `************${payment.cardlastfour}`, // Use stored last 4 digits
+              paymentType: "credit_card",
+            },
+            { withCredentials: true }
+          );
+        }
+
+        // NOW delete old reservation (after new one is created with payment)
+        await axios.delete(
+          `http://localhost:3000/reservations/${reservation.reservationid}`,
+          { withCredentials: true }
+        );
+
+        const diff = costPreview.totalCost - (cancellationFee?.paidAmount || 0);
+        let message = `Reservation updated to ${upgradedSite.newType} - ${upgradedSite.newSiteName}!\n\n`;
+
+        if (diff > 0) {
+          message += `Additional amount owed: $${diff.toFixed(2)}`;
+        } else if (diff < 0) {
+          message += `Refund amount: $${Math.abs(diff).toFixed(2)}`;
+        } else {
+          message += "No price change.";
+        }
+
+        alert(message);
       } else {
-        alert("Reservation updated — no price change.");
+        // Normal update - same site
+        const res = await axios.put(
+          `http://localhost:3000/reservations/${reservation.reservationid}`,
+          {
+            startDate: form.startDate,
+            endDate: form.endDate,
+          },
+          { withCredentials: true }
+        );
+
+        const diff = costPreview.totalCost - (cancellationFee?.paidAmount || 0);
+
+        if (diff > 0) {
+          alert(
+            `Reservation updated! Additional amount owed: $${diff.toFixed(2)}`
+          );
+        } else if (diff < 0) {
+          alert(
+            `Reservation updated! Refund amount: $${Math.abs(diff).toFixed(2)}`
+          );
+        } else {
+          alert("Reservation updated — no price change.");
+        }
       }
 
       navigate(homePage);
@@ -202,9 +479,15 @@ export function EditReservation() {
       const refundInfo = refundRes.data;
       let message = "Reservation canceled successfully!\n\n";
       if (refundInfo.originalAmount > 0) {
-        message += `Original Payment: $${parseFloat(refundInfo.originalAmount).toFixed(2)}\n`;
-        message += `Cancellation Fee: $${parseFloat(refundInfo.cancellationFee).toFixed(2)}\n`;
-        message += `Refund Amount: $${parseFloat(refundInfo.refundAmount).toFixed(2)}\n\n`;
+        message += `Original Payment: $${parseFloat(
+          refundInfo.originalAmount
+        ).toFixed(2)}\n`;
+        message += `Cancellation Fee: $${parseFloat(
+          refundInfo.cancellationFee
+        ).toFixed(2)}\n`;
+        message += `Refund Amount: $${parseFloat(
+          refundInfo.refundAmount
+        ).toFixed(2)}\n\n`;
         message += `Reason: ${refundInfo.reason}`;
       } else {
         message += "No payment was found for this reservation.";
@@ -229,12 +512,27 @@ export function EditReservation() {
         <InfoSection>
           <InfoRow>
             <InfoLabel>Site:</InfoLabel>
-            <InfoValue>{reservation.sitename}</InfoValue>
+            <InfoValue>
+              {upgradedSite ? upgradedSite.newSiteName : reservation.sitename}
+              {upgradedSite && (
+                <UpgradeIcon title="Site changed due to availability">
+                  ⬆️
+                </UpgradeIcon>
+              )}
+            </InfoValue>
           </InfoRow>
           <InfoRow>
             <InfoLabel>Site Type:</InfoLabel>
-            <InfoValue>{reservation.sitetype}</InfoValue>
+            <InfoValue>
+              {upgradedSite ? upgradedSite.newType : reservation.sitetype}
+            </InfoValue>
           </InfoRow>
+          {upgradedSite && (
+            <UpgradeNotice>
+              ℹ️ Site changed from {upgradedSite.originalType} to{" "}
+              {upgradedSite.newType} due to availability
+            </UpgradeNotice>
+          )}
         </InfoSection>
 
         <Grid>
@@ -259,17 +557,41 @@ export function EditReservation() {
           </Field>
         </Grid>
 
+        {availabilityError && (
+          <ErrorNotice>
+            <ErrorIcon>⚠️</ErrorIcon>
+            <ErrorText>{availabilityError}</ErrorText>
+          </ErrorNotice>
+        )}
+
         {/* Price summary */}
-        {costPreview && (
+        {costPreview && !availabilityError && (
           <PriceBox>
-            <p>Old Total: <strong>${cancellationFee?.paidAmount?.toFixed(2) || 0}</strong></p>
-            <p>New Total: <strong>${costPreview.totalCost.toFixed(2)}</strong></p>
+            <p>
+              Old Total:{" "}
+              <strong>${cancellationFee?.paidAmount?.toFixed(2) || 0}</strong>
+            </p>
+            <p>
+              New Total: <strong>${costPreview.totalCost.toFixed(2)}</strong>
+            </p>
             <p>
               Difference:{" "}
-              <strong style={{ color: costPreview.totalCost - (cancellationFee?.paidAmount || 0) < 0 ? "green" : "red" }}>
+              <strong
+                style={{
+                  color:
+                    costPreview.totalCost - (cancellationFee?.paidAmount || 0) <
+                    0
+                      ? "green"
+                      : "red",
+                }}
+              >
                 {costPreview.totalCost - (cancellationFee?.paidAmount || 0) < 0
-                  ? `Refund $${Math.abs(costPreview.totalCost - (cancellationFee?.paidAmount || 0)).toFixed(2)}`
-                  : `Charge $${(costPreview.totalCost - (cancellationFee?.paidAmount || 0)).toFixed(2)}`}
+                  ? `Refund $${Math.abs(
+                      costPreview.totalCost - (cancellationFee?.paidAmount || 0)
+                    ).toFixed(2)}`
+                  : `Charge $${(
+                      costPreview.totalCost - (cancellationFee?.paidAmount || 0)
+                    ).toFixed(2)}`}
               </strong>
             </p>
           </PriceBox>
@@ -280,7 +602,8 @@ export function EditReservation() {
             <CancellationTitle>Cancellation Policy</CancellationTitle>
             {cancellationFee.isHoliday && (
               <HolidayNotice>
-                ⚠️ Holiday/Special Event: {cancellationFee.holidayNames.join(", ")}
+                ⚠️ Holiday/Special Event:{" "}
+                {cancellationFee.holidayNames.join(", ")}
               </HolidayNotice>
             )}
             <CancellationDetails>
@@ -290,17 +613,23 @@ export function EditReservation() {
               </DetailRow>
               <DetailRow>
                 <DetailLabel>Cancellation fee:</DetailLabel>
-                <DetailValue>${parseFloat(cancellationFee.fee).toFixed(2)}</DetailValue>
+                <DetailValue>
+                  ${parseFloat(cancellationFee.fee).toFixed(2)}
+                </DetailValue>
               </DetailRow>
               {cancellationFee.paidAmount > 0 && (
                 <>
                   <DetailRow>
                     <DetailLabel>Amount paid:</DetailLabel>
-                    <DetailValue>${parseFloat(cancellationFee.paidAmount).toFixed(2)}</DetailValue>
+                    <DetailValue>
+                      ${parseFloat(cancellationFee.paidAmount).toFixed(2)}
+                    </DetailValue>
                   </DetailRow>
                   <DetailRow $highlight>
                     <DetailLabel>Refund amount:</DetailLabel>
-                    <DetailValue>${parseFloat(cancellationFee.refundAmount).toFixed(2)}</DetailValue>
+                    <DetailValue>
+                      ${parseFloat(cancellationFee.refundAmount).toFixed(2)}
+                    </DetailValue>
                   </DetailRow>
                 </>
               )}
@@ -314,7 +643,9 @@ export function EditReservation() {
             Cancel Reservation
           </CancelButton>
 
-          <SubmitButton type="submit">Save Changes</SubmitButton>
+          <SubmitButton type="submit" disabled={!!availabilityError}>
+            Save Changes
+          </SubmitButton>
         </Actions>
       </Form>
 
@@ -334,7 +665,9 @@ export function EditReservation() {
                 {cancellationFee.paidAmount > 0 && (
                   <ModalFeeRow $refund>
                     <span>You will receive:</span>
-                    <span>${parseFloat(cancellationFee.refundAmount).toFixed(2)}</span>
+                    <span>
+                      ${parseFloat(cancellationFee.refundAmount).toFixed(2)}
+                    </span>
                   </ModalFeeRow>
                 )}
               </ModalFeeInfo>
@@ -354,7 +687,7 @@ export function EditReservation() {
   );
 }
 
-// ------- NEW: pricing box -------
+// ------- Pricing box -------
 const PriceBox = styled.div`
   margin: 18px 0;
   padding: 16px;
@@ -363,11 +696,7 @@ const PriceBox = styled.div`
   background: #fafafa;
 `;
 
-
-
-
-
-/* Styled Components */
+// ------- Styled Components -------
 
 const Form = styled.form`
   display: flex;
@@ -394,6 +723,7 @@ const InfoSection = styled.div`
 const InfoRow = styled.div`
   display: flex;
   gap: 8px;
+  align-items: center;
 `;
 
 const InfoLabel = styled.span`
@@ -406,6 +736,47 @@ const InfoValue = styled.span`
   font-size: 0.875rem;
   color: #0f172a;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const UpgradeIcon = styled.span`
+  font-size: 1rem;
+  cursor: help;
+`;
+
+const UpgradeNotice = styled.div`
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 4px;
+`;
+
+const ErrorNotice = styled.div`
+  background: #fee2e2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+  padding: 12px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 8px;
+`;
+
+const ErrorIcon = styled.span`
+  font-size: 1.1rem;
+  flex-shrink: 0;
+`;
+
+const ErrorText = styled.span`
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
 `;
 
 const Grid = styled.div`
@@ -439,12 +810,12 @@ const DateInput = styled.input`
   color: #0f172a;
   font-size: 0.95rem;
   transition: box-shadow 160ms ease, border-color 160ms ease;
-  box-shadow: 0 1px 0 rgba(2,6,23,0.02);
+  box-shadow: 0 1px 0 rgba(2, 6, 23, 0.02);
 
   &:focus {
     outline: none;
-    border-color: rgba(59,130,246,0.9);
-    box-shadow: 0 6px 18px rgba(59,130,246,0.08);
+    border-color: rgba(59, 130, 246, 0.9);
+    box-shadow: 0 6px 18px rgba(59, 130, 246, 0.08);
   }
 `;
 
@@ -454,13 +825,19 @@ const Actions = styled.div`
 `;
 
 const SubmitButton = styled.button`
-  background: #045de9;
+  background: ${(props) => (props.disabled ? "#94a3b8" : "#045de9")};
   color: white;
   border: none;
   padding: 10px 16px;
   border-radius: 10px;
   font-weight: 600;
-  cursor: pointer;
+  cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
+  opacity: ${(props) => (props.disabled ? 0.6 : 1)};
+  transition: all 200ms ease;
+
+  &:hover {
+    opacity: ${(props) => (props.disabled ? 0.6 : 0.9)};
+  }
 `;
 
 const CancelButton = styled.button`
@@ -514,7 +891,9 @@ const DetailRow = styled.div`
   font-size: 0.9rem;
   color: ${({ $highlight }) => ($highlight ? "#065f46" : "#78350f")};
   font-weight: ${({ $highlight }) => ($highlight ? "700" : "500")};
-  ${({ $highlight }) => $highlight && "background: #d1fae5; padding: 8px 10px; border-radius: 6px; margin-top: 4px;"}
+  ${({ $highlight }) =>
+    $highlight &&
+    "background: #d1fae5; padding: 8px 10px; border-radius: 6px; margin-top: 4px;"}
 `;
 
 const DetailLabel = styled.span``;

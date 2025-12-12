@@ -6,7 +6,6 @@ import { StyledButton } from "../ui/StyledButton";
 import { Card } from "../ui/Card";
 
 export function RegisterForm(props) {
-  const navigate = useNavigate();
   const { register, setError, error, isAuthenticated, homePage } = useAuth();
 
   const [form, setForm] = useState({
@@ -35,7 +34,7 @@ export function RegisterForm(props) {
 
     try {
       await register(form);
-      props.onRegister(form.email);
+      await props.onRegister(form.email);
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Registration failed");
@@ -162,7 +161,7 @@ export function RegisterForm(props) {
 
         <LoginButtonContainer>
           <StyledButton type="submit" disabled={submitting}>
-            {submitting ? "Creating account..." : "Register"}
+            {submitting ? "Creating account..." : "Register and Submit"}
           </StyledButton>
         </LoginButtonContainer>
       </Form>

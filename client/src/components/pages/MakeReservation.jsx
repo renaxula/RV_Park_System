@@ -21,8 +21,6 @@ function validateReservationDates(startDate, endDate) {
   const [startYear, startMonth, startDay] = startDate.split("-").map(Number);
   const [endYear, endMonth, endDay] = endDate.split("-").map(Number);
 
-
-
   const start = new Date(startYear, startMonth - 1, startDay);
   const end = new Date(endYear, endMonth - 1, endDay);
   const today = new Date();
@@ -91,12 +89,14 @@ export function MakeReservation() {
   const prefillIsHoliday = location.state?.isHoliday;
   const prefillHolidayNames = location.state?.holidayNames;
   const fromGuestFlow = location.state?.fromGuestFlow;
-  
+
   const { user, homepage } = useAuth();
   const navigate = useNavigate();
   const [usersList, setUsersList] = useState([]);
   const [showPetModal, setShowPetModal] = useState(false);
   const [petPolicyAgreed, setPetPolicyAgreed] = useState(false);
+
+  const [autoSubmit, setAutoSubmit] = useState(false);
 
   // Determine initial form values - prioritize guest flow prefill data
   const getInitialFormValues = () => {
@@ -104,8 +104,14 @@ export function MakeReservation() {
       return {
         userId: user.role != "customer" ? "" : user.userId,
         rvSize: prefillReservation.rvSize || "",
-        startDate: prefillReservation.startDate || new Date().toISOString().split("T")[0],
-        endDate: prefillReservation.endDate || new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split("T")[0],
+        startDate:
+          prefillReservation.startDate ||
+          new Date().toISOString().split("T")[0],
+        endDate:
+          prefillReservation.endDate ||
+          new Date(new Date().setDate(new Date().getDate() + 7))
+            .toISOString()
+            .split("T")[0],
         spot: prefillReservation.siteId?.toString() || "",
         pets: false,
         notes: "",
@@ -131,7 +137,7 @@ export function MakeReservation() {
   );
   const [costPreview, setCostPreview] = useState(prefillCostDetails || null);
   const [holidayWarning, setHolidayWarning] = useState(
-    prefillIsHoliday ? prefillHolidayNames?.map(name => ({ name })) : null
+    prefillIsHoliday ? prefillHolidayNames?.map((name) => ({ name })) : null
   );
   const [error, setError] = useState(null);
 
@@ -265,8 +271,9 @@ export function MakeReservation() {
     // For employees/admins making reservations for others, include the userId
     // For customers or when no user is selected, omit userId (server will use session)
     const parsedUserId = parseInt(form.userId);
-    const shouldIncludeUserId = user.role !== "customer" && !isNaN(parsedUserId) && parsedUserId > 0;
-    
+    const shouldIncludeUserId =
+      user.role !== "customer" && !isNaN(parsedUserId) && parsedUserId > 0;
+
     const body = {
       ...(shouldIncludeUserId && { userId: parsedUserId }),
       siteId: parseInt(form.spot),
@@ -305,29 +312,47 @@ export function MakeReservation() {
   }, []);
 
   const fetchUsers = async () => {
-    try {
-      const response = await fetch("http://localhost:3000/admin/users", {
-        credentials: "include",
-      });
-      if (!response.ok) {
-        throw new Error("Failed to fetch users");
-      }
+    const response = await fetch("http://localhost:3000/admin/users", {
+      credentials: "include",
+    });
+    const data = await response.json();
+    setUsersList(data);
+    return data;        // <-- return the list
+  };
 
-      const data = await response.json();
-      setUsersList(data);
+  const updateUsersList = async (newEmail) => {
+    const updated = await fetchUsers();
+    const matched = updated.find((u) => u.emailaddress === newEmail);
 
-      console.log(data);
-    } catch (err) {
-      setError(err.message);
+    if (matched) {
+      setForm((prev) => ({
+        ...prev,
+        userId: matched.userid.toString(),
+      }));
+
+      setAutoSubmit(true);
     }
   };
 
-  const updateUsersList = (newEmail) => {
-    fetchUsers();
-  };
+  function setUserIdByEmail(email) {
+    const matchedUser = usersList.find((u) => u.emailaddress === email);
+    if (matchedUser) {
+      setForm((prevForm) => ({
+        ...prevForm,
+        userId: matchedUser.userid.toString(),
+      }));
+    }
+  }
+
+  useEffect(() => {
+    if (autoSubmit && user.role != "customer") {
+      handleSubmit();
+      setAutoSubmit(false);
+    }
+  }, [autoSubmit]);
 
   async function handleSubmit(e) {
-    e.preventDefault();
+    e?.preventDefault();
 
     if (!user?.userId) {
       alert("You must be logged in to make a reservation");
@@ -337,7 +362,12 @@ export function MakeReservation() {
     // Employees/admins must select a user (not "new" and not empty)
     if (user.role !== "customer") {
       const parsedUserId = parseInt(form.userId);
-      if (!form.userId || form.userId === "new" || isNaN(parsedUserId) || parsedUserId <= 0) {
+      if (
+        !form.userId ||
+        form.userId === "new" ||
+        isNaN(parsedUserId) ||
+        parsedUserId <= 0
+      ) {
         alert("Please select a customer for this reservation");
         return;
       }
@@ -372,7 +402,8 @@ export function MakeReservation() {
               <BannerText>
                 <strong>Account created successfully!</strong>
                 <br />
-                Your reservation details have been pre-filled. Review and submit to continue.
+                Your reservation details have been pre-filled. Review and submit
+                to continue.
               </BannerText>
             </GuestFlowBanner>
           )}
@@ -386,7 +417,7 @@ export function MakeReservation() {
                   name="userId"
                   onChange={updateField}
                 >
-                  <option value="" selected disabled>
+                  <option value="" disabled>
                     -- Select User --
                   </option>
                   <option value="new">New User</option>
@@ -410,8 +441,7 @@ export function MakeReservation() {
                   value={form.notes}
                   name="notes"
                   onChange={updateField}
-                >
-                </TextInput>
+                ></TextInput>
               </Field>
             ) : (
               ""
@@ -525,11 +555,17 @@ export function MakeReservation() {
             </CostPreview>
           )}
 
-          <Actions>
-            <StyledButton disabled={error !== null} $emphasize={true} type="submit">
-              Submit Reservation
-            </StyledButton>
-          </Actions>
+          {form.userId !== "new" && (
+            <Actions>
+              <StyledButton
+                disabled={error !== null}
+                $emphasize={true}
+                type="submit"
+              >
+                Submit Reservation
+              </StyledButton>
+            </Actions>
+          )}
         </Form>
         {form.userId == "new" && <RegisterForm onRegister={updateUsersList} />}
       </Card>
